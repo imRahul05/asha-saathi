@@ -10,6 +10,8 @@ Paste these one at a time into your local coding agent (Claude Code, Cursor, etc
 > 3. If a step fails twice, stop and report the exact error. Don't improvise a workaround that changes the architecture.
 > 4. End with a report in the format each task asks for.
 
+> **Revision 2 (20 Nov 2026), Option A:** there is no custom-LLM route and no AI Gateway key on the critical path. The LLM is Agora-managed; our app is the MCP tool server. See ARCHITECTURE §8–§9. Budget: **300 agent-minutes in total** (IMPLEMENTATION_PLAN), so keep every call under 3 minutes.
+
 ---
 
 ## P-01: Scaffold, run, deploy
@@ -41,15 +43,26 @@ Paste these one at a time into your local coding agent (Claude Code, Cursor, etc
 > **Pass:** there's a clear winner.
 > **Report:** a table of the area against ASR/LLM/TTS/total ms, one row per call.
 
-## P-04: Custom LLM wiring + auth header discovery
+## P-04 (rewritten): Managed LLM + MCP tool-calling + Murf voice (the spike)
 
-> 1. Generate a secret with `openssl rand -hex 24` and store it as `LLM_SHARED_SECRET` (local + Vercel).
-> 2. In `app/api/chat/completions/route.ts`, temporarily log `request.headers` at the top. **Redact** any value longer than 8 characters to its first 4 characters followed by `…`.
-> 3. In `invite-agent`, replace the `OpenAI` LLM with `new CustomLLM({ apiKey: process.env.LLM_SHARED_SECRET!, model: 'asha-agent', url: process.env.PUBLIC_BASE_URL + '/api/chat/completions', greetingMessage: 'नमस्ते दीदी! किसके घर visit हुई?', failureMessage: 'माफ़ कीजिए, फिर से बोलिए।', maxHistory: 16 })`. Set the route's model through AI Gateway for now: `import { gateway } from '@ai-sdk/gateway'`, with `model: gateway(process.env.LLM_MODEL!)`.
-> 4. Deploy to prod, make one call, and read the Vercel function logs.
+> **Status:** the text-injected half passed on 20 Nov (ARCHITECTURE §8.2). This task does the **voice half**. The code is on branch `spike/managed-mcp`: `app/api/mcp/route.ts`, `app/api/spike-agent/route.ts`, plus `NEXT_PUBLIC_AGENT_ENDPOINT=/api/spike-agent` in the Vercel env so the normal UI starts the spike agent.
+> Keep each call **under 3 minutes**. Stop the agent when you're done.
 >
-> **Pass:** the agent answers through our route (visible in the logs).
-> **Report:** **which header carried the secret** (e.g. `authorization: Bear…`), the full list of header *names* Agora sent, and the top-level JSON keys of the request body (e.g. `model, messages, stream, …`). Then remove the header logging.
+> 1. `pnpm install`, then make sure `MCP_SHARED_SECRET` (`openssl rand -hex 24`) and `PUBLIC_BASE_URL=https://<prod>` are in `.env.local` and in Vercel (Production + Preview). Add `MURF_API_KEY` and `MURF_VOICE_ID` (the voice from P-02). Redeploy.
+> 2. Contract check, no Agora: `curl -s -X POST $URL/api/mcp -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' -d '{}'` must return **401**. With `-H "authorization: Bearer $MCP_SHARED_SECRET"` and the body `{"jsonrpc":"2.0","id":1,"method":"tools/list"}` it must list `echoVisit`.
+> 3. Open the production URL, start a call and say: **"BP ek sau pachaas by sau hai, save kar do"**.
+> 4. Read the Vercel function logs: `vercel logs --since 5m --query "[mcp]"`.
+> 5. Agora Console → Usage/Billing: is there any **separate LLM or ASR charge**, or only agent-minutes?
+> 6. Hit the response `tts` field: `curl -s -X POST $URL/api/spike-agent -H 'content-type: application/json' -d '{"requester_id":"1","channel_name":"x"}'` must say `"tts":"murf"` (not `minimax-managed-FALLBACK`). Then stop that agent.
+>
+> **Pass:**
+> - the logs show `[mcp] echoVisit bp_sys=150 bp_dia=100`;
+> - the agent answers in **Hindi in the Murf voice**;
+> - the Console shows **no separate LLM charge**.
+>
+> **If it fails:** copy the exact Agora error (the UI's connection-issues panel, or the `AGENT_ERROR` payload). Retry **once** with HTTP tools: in `spike-agent`, replace `mcpServers` with `tools: [{ type:'function', function:{ name:'echoVisit', description, parameters }, server:{ method:'POST', url: '<prod>/api/echo-visit', headers:{ Authorization:'Bearer …' }, body:{ bp_sys:'{{args.bp_sys}}', bp_dia:'{{args.bp_dia}}' }, timeout_ms: 8000 } }]`. HTTP tools must be absolute HTTPS, GET/POST only, max 32, default timeout 10 s, no retries ([source](https://docs.agora.io/en/ai/platform/build/tools/custom-tools.md)). If that also fails, **stop and report**: we switch to Option B (ARCHITECTURE §8.1).
+>
+> **Report:** the `[mcp]` log lines, which header names Agora sent (names only), what the agent said, the `tts` value, the Console usage finding (agent-minutes only, or extra lines?), and the minutes this task used.
 
 ## P-05: ASR A/B for Hinglish
 
@@ -76,23 +89,22 @@ Paste these one at a time into your local coding agent (Claude Code, Cursor, etc
 > **Pass:** the Kannada session greets, understands the BP numbers, and replies in Kannada.
 > **Report:** Kannada transcripts per ASR, the Murf `kn-IN` voice ID used, and the exact Agora response for `mr-IN`.
 
-## P-06: Choose the LLM (free tier, Hindi, latency)
+## P-06 (rewritten): Choose the managed LLM (Hindi, tools, latency)
 
-> 1. Open https://vercel.com/ai-gateway/models?freeTier=true and list the free-tier **language** models and **embedding** models (IDs exactly as shown).
-> 2. Write `scripts/llm-bench.mjs`. For each of up to 4 free language models:
->    - `streamText` with our system prompt (`lib/prompt.ts` once it exists; otherwise "Reply in Devanagari Hindi, max 2 sentences") and the user message *"Sunita ji ka BP 150/100 hai, 7 mahine, kya karna chahiye?"*;
->    - also one tool-calling test: a `recordVisit` tool with a zod schema, to check the model calls it with correct numbers.
->    - Measure time-to-first-token and total time over 3 runs.
-> 3. Check that the Gateway dashboard still shows $0 of purchased credit.
+> No Gateway and no vendor key are involved. The managed models are `gpt-4o-mini`, `gpt-4.1-mini`, `gpt-5-nano` and `gpt-5-mini` ([source](https://docs.agora.io/en/ai/build/managed-mode.md)).
 >
-> **Pass:** at least one model returns correct Devanagari, calls the tool with `bp_sys: 150, bp_dia: 100, gestation_weeks: ~28`, and has a TTFT under ~1 s.
-> **Report:** a table of model → TTFT, total, Hindi quality (1–5), tool-call correct (y/n). Recommend `LLM_MODEL` and 2 `LLM_FALLBACKS`. List the free embedding model IDs with their dimensions.
+> 1. For each of the 4 models, set `LLM_MODEL` and make **one short call** (under 2 minutes) against the spike agent (or `/api/invite-agent` once it builds the full chain). Say these two things: *"Sunita ji ka BP ek sau pachaas by sau hai, saat mahine ki hain, save kar do"* and *"Isme family ko kya batayein?"*.
+> 2. For each call record: did the tool get the right numbers (`bp_sys 150, bp_dia 100`, weeks ≈ 28 once `recordVisit` exists), the Hindi quality of the reply (1–5, Devanagari, 1–2 sentences), and the time from the end of your speech to the start of the reply. Use the metrics panel (`QuickstartPipelineMetrics`) or the `enable_metrics` events for the per-stage ms.
+> 3. Use `think()` (text) for repeat runs where you don't need the microphone, and stop every agent after use.
+>
+> **Pass:** at least one model calls the tool with the right numbers, replies in correct Devanagari Hindi, and has a total reply latency under about 2 s.
+> **Report:** a table of model → LLM ms, total ms, Hindi quality (1–5), tool-call correct (y/n), and the minutes used. Recommend `LLM_MODEL` and one fallback model for the env switch.
 
 ## P-07: Contract checks after I deliver Phase 1 code
 
-> Pull the latest code. Run `pnpm install && pnpm typecheck && pnpm lint && pnpm verify:api && pnpm build`. Deploy. Then run `node scripts/verify-sse.mjs https://<prod>/api/chat/completions $LLM_SHARED_SECRET`, and also run it once with a wrong secret.
+> Pull the latest code. Run `pnpm install && pnpm typecheck && pnpm lint && pnpm verify:api && pnpm build`. Deploy. Then run `node scripts/verify-mcp.mjs https://<prod>/api/mcp $MCP_SHARED_SECRET`, and also run it once with a wrong secret.
 >
-> **Pass:** all commands are green, SSE prints Hindi chunks ending in `[DONE]`, and the wrong secret returns 401.
+> **Pass:** all commands are green, `verify-mcp` lists every tool and a valid `tools/call` result, and the wrong secret returns 401.
 > **Report:** the full output of any failing command.
 
 ## P-08: Extract guideline text with page numbers (RAG corpus + rules)
@@ -124,7 +136,7 @@ Paste these one at a time into your local coding agent (Claude Code, Cursor, etc
 ## P-10: pgvector + ingest + RAG eval
 
 > 1. In the Neon SQL editor, run `create extension if not exists vector; create extension if not exists pg_trgm;`.
-> 2. Set `EMBEDDING_MODEL` (from P-06) and `EMBEDDING_DIM`. Run `pnpm db:migrate && pnpm kb:ingest`, then run it again to prove idempotency (the second run should say 0 embedded).
+> 2. Pick an embedding model (optional; open https://vercel.com/ai-gateway/models?freeTier=true, list the free-tier **embedding** models with their dimensions, and keyword-only RAG is acceptable if none is free). Set `EMBEDDING_MODEL` and `EMBEDDING_DIM`. Run `pnpm db:migrate && pnpm kb:ingest`, then run it again to prove idempotency (the second run should say 0 embedded).
 > 3. Run `pnpm test:rag`.
 >
 > **Pass:** ingest succeeds, the second run skips everything, and at least 6 of 8 eval questions retrieve the expected source in the top 3.
@@ -155,7 +167,7 @@ Paste these one at a time into your local coding agent (Claude Code, Cursor, etc
 
 > 1. Run `/api/admin/reset`, then `node scripts/warmup.mjs`.
 > 2. Run the full 3-minute demo script (IMPLEMENTATION_PLAN Phase 7) 3 times and time each run.
-> 3. Record quotas used and remaining: Agora minutes, Murf characters, AI Gateway $ (must be $0 purchased), Twilio messages, Neon storage.
+> 3. Record quotas used and remaining: **Agora agent-minutes of the 300** (Console → Usage; ignore the 10,000 RTC minutes), Murf characters, AI Gateway $ (only if embeddings are used; must be $0 purchased), Twilio messages, Neon storage.
 > 4. Record a 90 s screen video of the best run with audio.
 >
 > **Report:** the 3 run times, any failures (with the timestamp and the Vercel log line), and the quota table.
