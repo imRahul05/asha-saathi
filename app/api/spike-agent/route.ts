@@ -117,6 +117,8 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({
       agent_id: agentId,
+      create_ts: Math.floor(Date.now() / 1000),
+      state: 'RUNNING',
       tts: useMurf ? 'murf' : 'minimax-managed-FALLBACK',
       mcp_endpoint: `${baseUrl}/api/mcp`,
       thinkResult,
