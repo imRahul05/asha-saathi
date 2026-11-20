@@ -100,6 +100,10 @@ export default function ConversationComponent({
   const [isAgentConnected, setIsAgentConnected] = useState(false);
   // True once the agent has been missing from the channel for a while (drives the plain-words warning).
   const [agentSlow, setAgentSlow] = useState(false);
+  // Live captions: the caption feed is set up once the call is joined. If it fails to start, or the agent is clearly in the call but nothing
+  // arrives, set it up again once by itself, and after that tell the person (the call itself keeps working).
+  const [captionAttempt, setCaptionAttempt] = useState(0);
+  const [captionsStalled, setCaptionsStalled] = useState(false);
 
   // Tracks granular RTC connection state for the status dot.
   // Agora states: DISCONNECTED | CONNECTING | CONNECTED | DISCONNECTING | RECONNECTING
@@ -279,6 +283,8 @@ export default function ConversationComponent({
       } catch (error) {
         if (!cancelled) {
           console.error('[AgoraVoiceAI] init failed:', error);
+          setCaptionAttempt((a) => (a < 1 ? a + 1 : a));
+          setCaptionsStalled(true);
         }
       }
     })();
@@ -294,7 +300,21 @@ export default function ConversationComponent({
       } catch {}
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isReady, joinSuccess]);
+  }, [isReady, joinSuccess, captionAttempt]);
+
+  // Watchdog: the agent is in the call but no caption has arrived.
+  useEffect(() => {
+    if (rawTranscript.length > 0) {
+      setCaptionsStalled(false);
+      return;
+    }
+    if (!isAgentConnected) return;
+    const id = setTimeout(() => {
+      if (captionAttempt < 1) setCaptionAttempt(1); // first stall: quietly set the captions up again
+      else setCaptionsStalled(true); // still nothing: show a message with a Retry button
+    }, 14000);
+    return () => clearTimeout(id);
+  }, [isAgentConnected, rawTranscript.length, captionAttempt]);
 
   // Raw RTM parsing is kept as a fallback for signaling-level errors and SAL status.
   useEffect(() => {
@@ -508,8 +528,17 @@ export default function ConversationComponent({
         onRetry: handleEndConversation,
       };
     }
+    if (captionsStalled) {
+      return {
+        text: stringsFor(callLanguage === 'auto' || !callLanguage ? uiLang : callLanguage, uiLang).captionsStalled,
+        onRetry: () => {
+          setCaptionsStalled(false);
+          setCaptionAttempt((a) => a + 1);
+        },
+      };
+    }
     return null;
-  }, [connectionIssues, connectionSeverity, agentSlow, isAgentConnected, handleEndConversation, notJoinedText]);
+  }, [connectionIssues, connectionSeverity, agentSlow, isAgentConnected, handleEndConversation, notJoinedText, captionsStalled, callLanguage, uiLang]);
 
   return (
     <>

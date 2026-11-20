@@ -124,4 +124,13 @@ export const hi: Strings = {
   statVisits: 'आज की विज़िट',
   statAlerts: 'भेजे गए अलर्ट',
   pending: 'बाकी',
+  sendNow: 'अभी भेजें',
+  sendingNow: 'भेज रही हूँ…',
+  sentViaBar: (d, c) => `${d} को ${c} पर अलर्ट भेज दिया`,
+  readyBar: 'अलर्ट तैयार है, पर अभी भेजा नहीं गया',
+  failedBar: 'अलर्ट पहुँचा नहीं',
+  tryAgain: 'फिर कोशिश करें',
+  testModeNote: 'टेस्ट मोड: कोई असली मैसेज नहीं गया। सर्वर में NOTIFIER सेट करें।',
+  sendError: 'भेज नहीं सके। फिर कोशिश करें।',
+  captionsStalled: 'लाइव कैप्शन नहीं दिख रहे। कॉल चल रही है। दोबारा लाने के लिए “फिर कोशिश करें” दबाइए।',
 };

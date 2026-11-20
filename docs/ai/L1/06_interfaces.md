@@ -93,6 +93,12 @@ From `types/conversation.ts` (high-use):
 
 - `401 SESSION_EXPIRED` (token and agent routes): the signed-in account no longer exists. `401 SIGN_IN_REQUIRED`: no valid cookie. Both send the user to `/login?expired=1`.
 
+## Alerts from the screen
+
+- `POST /api/alerts/send` body `{ visitId }` (session required): the ASHA's own tap on "Send now" / "Try again". It runs `draftAlert` then `sendAlert` (same tools as the voice agent: at most once, logged as events, only her own visits) and answers `{ ok, status, provider }`. The result card's `AlertBar` shows draft / failed / sent plus "Talk to the doctor".
+- `sendAlert` takes an optional token: without it, the latest open draft of the signed-in ASHA is sent.
+- With `NOTIFIER` unset the app only logs alerts; the bar says "Test mode: no real message was sent". `pnpm setup:local` sets `NOTIFIER=multi` when Telegram or Twilio credentials exist.
+
 ## Guideline search
 
 - Tool `searchGuidelines({ query })` (8th MCP tool). `query` is 3 to 200 characters of English keywords. Returns `{ found: true, rules, passages: [{ source, page, text }] }` or `{ found: false, hint }`. Passages come from `kb_chunks` (verbatim official quotes). A passage must match at least two content words of the query, so off-topic questions return nothing.

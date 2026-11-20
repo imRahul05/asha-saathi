@@ -133,6 +133,15 @@ export const en = {
   statVisits: 'Visits today',
   statAlerts: 'Alerts sent',
   pending: 'Pending',
+  sendNow: 'Send now',
+  sendingNow: 'Sending…',
+  sentViaBar: (d: string, c: string) => `Alert sent to ${d} by ${c}`,
+  readyBar: 'Alert is ready but NOT sent yet',
+  failedBar: 'The alert was not delivered',
+  tryAgain: 'Try again',
+  testModeNote: 'Test mode: no real message was sent. Set NOTIFIER in the server settings.',
+  sendError: 'Could not send. Try again.',
+  captionsStalled: 'Live captions are not showing. The call is still working. Tap Retry to reload them.',
 };
 
 export type Strings = typeof en;

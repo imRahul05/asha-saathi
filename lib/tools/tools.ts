@@ -6,7 +6,7 @@ import { composeAlertMessage, composeSmsText } from '@/lib/alerts/message';
 import { callUrl } from '@/lib/call/link';
 import {
   alertsForVisit, claimAlertForSending, findBeneficiaries, findRecentDuplicateVisit, getAlertByToken, getAsha, getBeneficiary,
-  getVisit, insertAlertDraft, insertFollowUp, insertVisit, markAlertFailed, markAlertSent, pendingFollowUps, recentVisits, todayCounts,
+  getVisit, insertAlertDraft, insertFollowUp, insertVisit, latestOpenAlertForAsha, markAlertFailed, markAlertSent, pendingFollowUps, recentVisits, todayCounts,
   type Beneficiary,
 } from '@/lib/db/repo';
 import { defineTool, ToolError, type ToolContext } from './define';
@@ -185,13 +185,14 @@ export const draftAlert = defineTool({
 
 export const sendAlert = defineTool({
   name: 'sendAlert',
-  description: 'Send a drafted alert to the doctor. Only call this after the ASHA has clearly said yes (haan / sari / yes). Sends at most once per draft.',
-  input: z.object({ token: z.string().min(4).max(40) }),
+  description:
+    'Send the drafted alert to the doctor. Only call this after the ASHA has clearly said yes (haan / sari / yes). Sends at most once per draft. The token from draftAlert is optional: leave it out and the latest open draft is sent.',
+  input: z.object({ token: z.string().min(4).max(40).optional() }),
   sideEffect: true,
   timeoutMs: 12000,
   async run({ token }, ctx) {
-    const existing = await getAlertByToken(ctx.db, token.trim().toLowerCase());
-    if (!existing) throw new ToolError('NO_DRAFT', 'पहले alert तैयार करना होगा।', 'Unknown token. Call draftAlert first.');
+    const existing = token ? await getAlertByToken(ctx.db, token.trim().toLowerCase()) : await latestOpenAlertForAsha(ctx.db, ctx.ashaId);
+    if (!existing) throw new ToolError('NO_DRAFT', 'पहले alert तैयार करना होगा।', 'There is no open draft. Call draftAlert first.');
     if (existing.status === 'sent') {
       return { status: 'sent' as const, alreadySent: true, provider: existing.provider, sentAt: existing.sentAt, hint: 'Already sent earlier. Do not send again; just confirm it.' };
     }

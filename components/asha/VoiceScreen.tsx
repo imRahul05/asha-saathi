@@ -13,6 +13,7 @@ import { LANGUAGES, isLangCode } from '@/lib/languages';
 import { HELLO, STRINGS, detectUiLang, type UiLang } from '@/lib/i18n';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
 import { ConnectingGreetings } from './ConnectingGreetings';
+import { AlertBar } from './AlertBar';
 
 export type TranscriptMessage = {
   turn_id?: string | number;
@@ -242,6 +243,7 @@ export function VoiceScreen({
       >
         {visit && snapshot ? (
           <div className="space-y-6 pb-4">
+            <AlertBar visit={visit} s={s} />
             <RiskResult visit={visit} events={snapshot.events} s={s} />
             <AlertSent visit={visit} remaining={snapshot.remaining} s={s} />
           </div>
