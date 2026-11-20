@@ -13,8 +13,27 @@ const config: Config = {
   	extend: {
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        // Latin + Devanagari + Kannada, so Hindi/Kannada/English render in one line without tofu.
+        asha: ['var(--font-latin)', 'var(--font-deva)', 'var(--font-knda)', 'system-ui', 'sans-serif'],
       },
   		colors: {
+        // ASHA Saathi palette (from the design mockups). Fixed values: these screens do not follow OS dark mode.
+        asha: {
+          cream: '#F6F0E4',
+          sand: '#EFE8DA',
+          paper: '#FFFFFF',
+          line: '#E4DAC8',
+          ink: '#1E2824',
+          muted: '#6B6F68',
+          teal: '#1F6B5E',
+          'teal-dark': '#165046',
+          orange: '#D9732A',
+          'orange-dark': '#B85C1B',
+          red: '#A8201A',
+          'red-soft': '#FBE4E1',
+          mint: '#E3F0E8',
+          amber: '#F4E3B4',
+        },
         // The <alpha-value> placeholder enables Tailwind opacity modifiers like
         // bg-primary/90, bg-card/80, bg-destructive/10, etc.
         // Without it, hsl(var(--token)) can't accept an alpha channel at utility-class time.

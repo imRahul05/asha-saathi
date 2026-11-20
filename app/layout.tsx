@@ -1,16 +1,34 @@
 import type { Metadata, Viewport } from 'next';
+import { Inter, Noto_Sans_Devanagari, Noto_Sans_Kannada } from 'next/font/google';
 import './globals.css';
+
+// One font stack for three scripts. Browsers fall back per glyph: Latin -> Devanagari -> Kannada.
+const latin = Inter({ subsets: ['latin'], variable: '--font-latin', display: 'swap' });
+const deva = Noto_Sans_Devanagari({
+  subsets: ['devanagari', 'latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-deva',
+  display: 'swap',
+});
+const knda = Noto_Sans_Kannada({
+  subsets: ['kannada', 'latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-knda',
+  display: 'swap',
+});
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#F6F0E4',
 };
 
 export const metadata: Metadata = {
-  title: 'Talk to your voice agent | Agora',
+  title: 'ASHA Saathi',
   description:
-    "Next.js quickstart: real-time voice agent with live transcript, streaming audio, and low latency from Agora's Conversational AI Engine—API routes in one repo.",
+    'A voice copilot for ASHA health workers. Speak in Hindi, Kannada or English; it records the visit, flags high-risk pregnancies and alerts the doctor.',
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -18,18 +36,6 @@ export const metadata: Metadata = {
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
     ],
     apple: [{ url: '/apple-touch-icon.png' }],
-    other: [
-      {
-        url: '/android-chrome-192x192.png',
-        sizes: '192x192',
-        type: 'image/png',
-      },
-      {
-        url: '/android-chrome-512x512.png',
-        sizes: '512x512',
-        type: 'image/png',
-      },
-    ],
   },
 };
 
@@ -39,8 +45,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
-      <body className="h-full min-h-screen">{children}</body>
+    <html lang="hi" className={`h-full ${latin.variable} ${deva.variable} ${knda.variable}`}>
+      <body className="h-full min-h-screen bg-asha-cream font-asha text-asha-ink antialiased">
+        {children}
+      </body>
     </html>
   );
 }

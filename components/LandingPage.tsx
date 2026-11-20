@@ -2,7 +2,6 @@
 
 import { useState, useRef, Suspense, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import Image from 'next/image';
 import type { RTMClient } from 'agora-rtm';
 import type {
   AgoraTokenData,
@@ -12,7 +11,7 @@ import type {
 } from '../types/conversation';
 import { ErrorBoundary } from './ErrorBoundary';
 import { LoadingSkeleton } from './LoadingSkeleton';
-import { QuickstartPreCallCard } from './QuickstartPreCallCard';
+import { StartScreen } from './asha/StartScreen';
 
 // Dynamically import the ConversationComponent with ssr disabled
 const ConversationComponent = dynamic(() => import('./ConversationComponent'), {
@@ -67,12 +66,13 @@ export default function LandingPage() {
   const [error, setError] = useState<string | null>(null);
   const [agoraData, setAgoraData] = useState<AgoraTokenData | null>(null);
   const [rtmClient, setRtmClient] = useState<RTMClient | null>(null);
-  const [agentJoinError, setAgentJoinError] = useState(false);
+  // Real reason the agent could not start (HTTP status + body), shown on screen instead of a vague banner.
+  const [agentJoinError, setAgentJoinError] = useState<string | null>(null);
 
   const handleStartConversation = async () => {
     setIsLoading(true);
     setError(null);
-    setAgentJoinError(false);
+    setAgentJoinError(null);
 
     try {
       // 1. Fetch RTC token + channel
@@ -102,14 +102,15 @@ export default function LandingPage() {
         })
           .then(async (res) => {
             if (!res.ok) {
-              setAgentJoinError(true);
+              const body = await res.text().catch(() => '');
+              setAgentJoinError(`Agent start failed (HTTP ${res.status}). ${body.slice(0, 240)}`);
               return null;
             }
             return res.json() as Promise<AgentResponse>;
           })
           .catch((err) => {
             console.error('Failed to start conversation with agent:', err);
-            setAgentJoinError(true);
+            setAgentJoinError(`Could not reach the agent service: ${String(err)}`);
             return null;
           }),
 
@@ -202,85 +203,37 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="relative flex h-dvh min-h-screen flex-col overflow-hidden bg-background text-foreground">
-      {/* Hero shell: either shows the pre-call CTA or swaps in the live conversation experience. */}
-      <div
-        className={`flex min-h-0 flex-1 flex-col ${
-          showConversation
-            ? 'items-stretch justify-start'
-            : 'items-center justify-center'
-        }`}
-      >
-        <div
-          className={`z-10 flex min-h-0 flex-1 flex-col ${
-            showConversation
-              ? 'h-full w-full max-w-none items-stretch gap-0 px-0 text-left'
-              : 'w-full max-w-none items-center justify-center px-4 text-center'
-          }`}
-        >
-          {!showConversation ? (
-            <QuickstartPreCallCard
-              isLoading={isLoading}
-              error={error}
-              onStartConversation={handleStartConversation}
-            />
-          ) : agoraData && rtmClient ? (
-            <>
-              {/* Non-fatal invite warning: the browser session can still render even if agent start failed. */}
-              {agentJoinError && (
-                <div className="p-3 bg-destructive/10 rounded-md text-destructive text-sm max-w-sm">
-                  Failed to connect with AI agent. The conversation may not work
-                  as expected.
-                </div>
-              )}
-              {/* Browser-only conversation mount: RTC provider, error boundary, and lazy-loaded call UI. */}
-              <Suspense fallback={<LoadingSkeleton />}>
-                <ErrorBoundary>
-                  <AgoraProvider>
-                    <ConversationComponent
-                      agoraData={agoraData}
-                      rtmClient={rtmClient}
-                      onTokenWillExpire={handleTokenWillExpire}
-                      onEndConversation={handleEndConversation}
-                    />
-                  </AgoraProvider>
-                </ErrorBoundary>
-              </Suspense>
-            </>
-          ) : (
-            /* Fallback if session bootstrap partially succeeded but required state is missing. */
-            <p className="text-sm text-muted-foreground">
-              Failed to load conversation data.
-            </p>
+    <div className="relative h-dvh overflow-hidden bg-asha-cream text-asha-ink">
+      {!showConversation ? (
+        <StartScreen isLoading={isLoading} error={error} onStart={handleStartConversation} />
+      ) : agoraData && rtmClient ? (
+        <>
+          {/* Non-fatal: the call screen still renders, but say exactly why the agent is missing. */}
+          {agentJoinError && (
+            <div
+              role="alert"
+              className="absolute inset-x-0 top-0 z-20 mx-auto max-w-md break-words bg-asha-red px-4 py-2 text-center text-sm font-medium text-white"
+            >
+              {agentJoinError}
+            </div>
           )}
-        </div>
-      </div>
-
-      {/* Persistent attribution footer for the pre-call and in-call views. */}
-      <footer className="fixed bottom-0 right-0 z-40 py-4 pr-4 md:py-6 md:pr-6">
-        <div className="flex items-center justify-end gap-2 text-muted-foreground">
-          <span className="text-xs font-medium tracking-wide uppercase">
-            Powered by
-          </span>
-          <a
-            href="https://agora.io/en/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-primary transition-colors"
-            aria-label="Visit Agora's website"
-          >
-            <Image
-              src="/agora-logo-rgb-blue.svg"
-              alt="Agora"
-              width={86}
-              height={24}
-              priority
-              className="h-6 w-auto hover:opacity-80 transition-opacity translate-y-1"
-            />
-            <span className="sr-only">Agora</span>
-          </a>
-        </div>
-      </footer>
+          {/* Browser-only conversation mount: RTC provider, error boundary, and lazy-loaded call UI. */}
+          <Suspense fallback={<LoadingSkeleton />}>
+            <ErrorBoundary>
+              <AgoraProvider>
+                <ConversationComponent
+                  agoraData={agoraData}
+                  rtmClient={rtmClient}
+                  onTokenWillExpire={handleTokenWillExpire}
+                  onEndConversation={handleEndConversation}
+                />
+              </AgoraProvider>
+            </ErrorBoundary>
+          </Suspense>
+        </>
+      ) : (
+        <p className="p-6 text-sm text-asha-muted">Failed to load conversation data.</p>
+      )}
     </div>
   );
 }
