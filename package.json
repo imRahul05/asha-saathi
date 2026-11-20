@@ -18,9 +18,8 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.39",
+    "@base-ui/react": "^1.9.0",
     "@modelcontextprotocol/server": "^2.4.0",
-    "@radix-ui/react-dropdown-menu": "^2.1.4",
-    "@radix-ui/react-slot": "^1.1.1",
     "agora-agent-client-toolkit": "2.10.0",
     "agora-agent-uikit": "1.1.0",
     "agora-agents": "^2.15.0",
