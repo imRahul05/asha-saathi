@@ -35,6 +35,8 @@ import {
   type ConnectionIssue,
 } from './ConversationErrorCard';
 import { VoiceScreen } from './asha/VoiceScreen';
+import { useLanguage } from '@/components/i18n/LanguageProvider';
+import { stringsFor } from '@/lib/i18n';
 import { useSnapshot } from '@/hooks/use-snapshot';
 import type { OrbState } from '@/lib/asha/lang';
 import { type QuickstartAgentMetric } from './QuickstartPipelineMetrics';
@@ -491,6 +493,9 @@ export default function ConversationComponent({
     }
   }, [visualizerState, isEnabled]);
 
+  const { uiLang } = useLanguage();
+  const notJoinedText = stringsFor(callLanguage === 'auto' || !callLanguage ? uiLang : callLanguage, uiLang).agentNotJoined;
+
   // Real error text when we have it: latest agent/RTM issue, else a plain "not joined" message.
   const problem = useMemo(() => {
     const latest = connectionIssues[0]; // issues are prepended, newest first
@@ -499,12 +504,12 @@ export default function ConversationComponent({
     }
     if (agentSlow && !isAgentConnected) {
       return {
-        text: 'The voice agent has not joined the call yet. Tap Retry to start again.',
+        text: notJoinedText,
         onRetry: handleEndConversation,
       };
     }
     return null;
-  }, [connectionIssues, connectionSeverity, agentSlow, isAgentConnected, handleEndConversation]);
+  }, [connectionIssues, connectionSeverity, agentSlow, isAgentConnected, handleEndConversation, notJoinedText]);
 
   return (
     <>

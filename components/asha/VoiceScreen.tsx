@@ -8,8 +8,11 @@ import { RiskResult } from './RiskResult';
 import { AlertSent } from './AlertSent';
 import { cn } from '@/lib/utils';
 import type { Snapshot } from '@/lib/snapshot-types';
-import { ORB_LABEL, UI_TEXT, detectLang, type Lang, type OrbState } from '@/lib/asha/lang';
-import { LANGUAGES, isLangCode, uiLabelSet } from '@/lib/languages';
+import type { OrbState } from '@/lib/asha/lang';
+import { LANGUAGES, isLangCode } from '@/lib/languages';
+import { HELLO, STRINGS, detectUiLang, type UiLang } from '@/lib/i18n';
+import { useLanguage } from '@/components/i18n/LanguageProvider';
+import { ConnectingGreetings } from './ConnectingGreetings';
 
 export type TranscriptMessage = {
   turn_id?: string | number;
@@ -35,6 +38,9 @@ type VoiceScreenProps = {
   callLanguage?: string;
 };
 
+const orbLabel = (s: (typeof STRINGS)['en'], state: OrbState): string =>
+  ({ joining: s.connecting, 'not-joined': s.orbNotJoined, listening: s.orbListening, thinking: s.orbThinking, speaking: s.orbSpeaking, muted: s.orbMuted, disconnected: s.orbDisconnected })[state];
+
 const initials = (name: string) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
 
@@ -51,18 +57,19 @@ export function VoiceScreen({
   );
 
   // Detected language = language of the most recent message that has real text.
-  const detected = useMemo<Lang>(() => {
+  const { uiLang } = useLanguage();
+  const detected = useMemo<UiLang | null>(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
-      const d = detectLang(messages[i].text);
+      const d = detectUiLang(messages[i].text);
       if (d) return d;
     }
-    return 'hi';
+    return null;
   }, [messages]);
 
   // The call language is fixed (chosen on the start screen). Only in Auto mode do the labels follow what was last spoken.
   const call = isLangCode(callLanguage) ? LANGUAGES[callLanguage] : LANGUAGES.hi;
-  const lang: Lang = call.code === 'auto' ? detected : uiLabelSet(call.code);
-  const t = UI_TEXT[lang];
+  const lang: UiLang = call.code === 'auto' ? (detected ?? uiLang) : call.code;
+  const s = STRINGS[lang];
 
   useEffect(() => {
     const node = scrollRef.current;
@@ -94,7 +101,7 @@ export function VoiceScreen({
           </div>
           <div className="min-w-0">
             <p className="truncate text-lg font-bold leading-6 lg:text-xl">{asha?.name ?? 'ASHA Saathi'}</p>
-            <p className="truncate text-sm text-asha-muted">{asha ? `ASHA · ${asha.phcName}` : 'Connecting…'}</p>
+            <p className="truncate text-sm text-asha-muted">{asha ? `ASHA · ${asha.phcName}` : s.connecting}</p>
           </div>
         </div>
 
@@ -112,12 +119,12 @@ export function VoiceScreen({
 
       {counts && (
         <div className="flex gap-2 px-4 pb-2 lg:col-span-2 lg:px-0 lg:pb-4">
-          <span className="rounded-full border border-asha-line bg-white px-3 py-1 text-sm font-medium">{counts.visits} visits आज</span>
+          <span className="rounded-full border border-asha-line bg-white px-3 py-1 text-sm font-medium">{s.visitsToday(counts.visits)}</span>
           {counts.highRisk > 0 && (
-            <span className="rounded-full bg-asha-red-soft px-3 py-1 text-sm font-bold text-asha-red">{counts.highRisk} high risk</span>
+            <span className="rounded-full bg-asha-red-soft px-3 py-1 text-sm font-bold text-asha-red">{s.highRiskCount(counts.highRisk)}</span>
           )}
           {counts.alertsSent > 0 && (
-            <span className="rounded-full bg-asha-mint px-3 py-1 text-sm font-medium text-asha-teal">{counts.alertsSent} alert भेजे</span>
+            <span className="rounded-full bg-asha-mint px-3 py-1 text-sm font-medium text-asha-teal">{s.alertsSent(counts.alertsSent)}</span>
           )}
         </div>
       )}
@@ -127,8 +134,8 @@ export function VoiceScreen({
           {signedOut && (
             <div role="alert" className="flex items-start gap-3 rounded-2xl border border-asha-red/20 bg-asha-red-soft p-3 text-sm text-asha-red">
               <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
-              <p className="min-w-0 flex-1 font-medium">Your session ended, so results cannot load.</p>
-              <a href="/login?expired=1" className="shrink-0 rounded-full border border-asha-red/30 bg-white px-3 py-1 font-bold">Sign in again</a>
+              <p className="min-w-0 flex-1 font-medium">{s.signedOut}</p>
+              <a href="/login?expired=1" className="shrink-0 rounded-full border border-asha-red/30 bg-white px-3 py-1 font-bold">{s.signInAgain}</a>
             </div>
           )}
           {noDb && (
@@ -143,7 +150,7 @@ export function VoiceScreen({
               <p className="min-w-0 flex-1 break-words font-medium">{problem.text}</p>
               {problem.onRetry && (
                 <Button variant="outline" size="sm" className="shrink-0 border-asha-red/30 bg-white text-asha-red" onClick={problem.onRetry}>
-                  <RefreshCw className="h-4 w-4" aria-hidden /> Retry
+                  <RefreshCw className="h-4 w-4" aria-hidden /> {s.retry}
                 </Button>
               )}
             </div>
@@ -161,7 +168,7 @@ export function VoiceScreen({
             onClick={() => setTab(k)}
             className={cn('relative h-10 rounded-full transition-colors', tab === k ? 'bg-white shadow-sm' : 'text-asha-muted')}
           >
-            {k === 'talk' ? 'बातचीत' : 'Visit'}
+            {k === 'talk' ? s.tabTalk : s.tabVisit}
             {k === 'result' && visit && tab !== 'result' && <span className="absolute right-4 top-2.5 h-2 w-2 rounded-full bg-asha-red" aria-label="new" />}
           </button>
         ))}
@@ -177,14 +184,14 @@ export function VoiceScreen({
         aria-label="Conversation"
       >
         {messages.length === 0 ? (
-          <p className="m-auto max-w-[16rem] text-center text-base text-asha-muted">{t.empty}</p>
+          <p className="m-auto max-w-[16rem] text-center text-base text-asha-muted">{s.empty}</p>
         ) : (
           messages.map((m, i) => {
             const isAgent = String(m.uid) === agentUID;
             const text = m.text?.trim();
             return (
               <div key={`${m.turn_id ?? m.uid}-${i}`} className={cn('flex flex-col', isAgent ? 'items-start' : 'items-end')}>
-                <span className="mb-1 px-1 text-xs font-semibold text-asha-muted">{isAgent ? t.saathi : t.you}</span>
+                <span className="mb-1 px-1 text-xs font-semibold text-asha-muted">{isAgent ? s.saathi : s.you}</span>
                 <p
                   className={cn(
                     'max-w-[88%] whitespace-pre-wrap break-words rounded-3xl px-4 py-3 text-[17px] leading-7',
@@ -203,11 +210,14 @@ export function VoiceScreen({
       <div className="order-last flex shrink-0 flex-col items-center gap-4 px-4 pb-6 pt-4 lg:order-none lg:col-start-2 lg:row-start-4 lg:gap-6 lg:pb-4 lg:pt-0">
         <Orb
           state={orbState}
-          label={ORB_LABEL[lang][orbState]}
+          label={orbLabel(s, orbState)}
           onClick={orbClickable ? onToggleMic : undefined}
           disabled={!orbClickable}
           ariaLabel={orbState === 'muted' ? 'Unmute microphone' : 'Mute microphone'}
         />
+        {(orbState === 'joining' || orbState === 'not-joined') && (
+          <ConnectingGreetings words={call.code === 'auto' ? Object.values(HELLO) : [HELLO[lang]]} />
+        )}
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
@@ -216,7 +226,7 @@ export function VoiceScreen({
             aria-label="End call"
           >
             <PhoneOff className="h-4 w-4" aria-hidden />
-            {t.end}
+            {s.end}
           </Button>
           {micSelector}
         </div>
@@ -232,16 +242,12 @@ export function VoiceScreen({
       >
         {visit && snapshot ? (
           <div className="space-y-6 pb-4">
-            <RiskResult visit={visit} events={snapshot.events} />
-            <AlertSent visit={visit} remaining={snapshot.remaining} />
+            <RiskResult visit={visit} events={snapshot.events} s={s} />
+            <AlertSent visit={visit} remaining={snapshot.remaining} s={s} />
           </div>
         ) : (
           <p className="mx-auto mt-6 max-w-xs text-center text-base text-asha-muted lg:mt-2">
-            {lang === 'kn'
-              ? 'ಭೇಟಿ ದಾಖಲಾದ ತಕ್ಷಣ ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತದೆ.'
-              : lang === 'en'
-                ? 'The visit appears here as soon as it is saved.'
-                : 'Visit दर्ज होते ही यहाँ दिखेगी।'}
+            {s.visitEmpty}
           </p>
         )}
       </div>

@@ -3,23 +3,25 @@
 import { Check, FileText, TriangleAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RiskLevel, SnapshotEvent, SnapshotVisit } from '@/lib/snapshot-types';
+import type { Strings } from '@/lib/i18n';
 
-const LEVEL: Record<RiskLevel, { label: string; hindi: string; bar: string }> = {
-  urgent: { label: 'URGENT', hindi: 'तुरंत health centre ले जाएँ', bar: 'bg-asha-red' },
-  high: { label: 'HIGH RISK', hindi: 'डॉक्टर को जल्दी दिखाना ज़रूरी है', bar: 'bg-asha-red' },
-  watch: { label: 'WATCH', hindi: 'अगली visit पर फिर जाँचें', bar: 'bg-[#B7791F]' },
-  normal: { label: 'NORMAL', hindi: 'सब ठीक है', bar: 'bg-asha-teal' },
-};
+const BAR: Record<RiskLevel, string> = { urgent: 'bg-asha-red', high: 'bg-asha-red', watch: 'bg-[#B7791F]', normal: 'bg-asha-teal' };
+const levelText = (s: Strings): Record<RiskLevel, { label: string; advice: string; why: string }> => ({
+  urgent: { label: s.riskUrgent, advice: s.adviceUrgent, why: s.whyUrgent },
+  high: { label: s.riskHigh, advice: s.adviceHigh, why: s.whyHigh },
+  watch: { label: s.riskWatch, advice: s.adviceWatch, why: s.whyWatch },
+  normal: { label: s.riskNormal, advice: s.adviceNormal, why: s.whyNormal },
+});
 
-type Props = { visit: SnapshotVisit; events?: SnapshotEvent[] };
+type Props = { visit: SnapshotVisit; events?: SnapshotEvent[]; s: Strings };
 
 const timeOf = (iso: string) =>
   new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' }).format(new Date(iso));
 
 // What was recorded, how risky it is, and why. The risk text comes from fixed rules, never from the model.
-export function RiskResult({ visit, events = [] }: Props) {
+export function RiskResult({ visit, events = [], s }: Props) {
   const { beneficiary: b, vitals: v, risk } = visit;
-  const lv = LEVEL[risk.level];
+  const lv = { ...levelText(s)[risk.level], bar: BAR[risk.level] };
   const hot = risk.level === 'high' || risk.level === 'urgent';
   // One chip per tool, newest state wins.
   const chips = Array.from(new Map(events.map((e) => [e.name, e])).values());
@@ -28,9 +30,9 @@ export function RiskResult({ visit, events = [] }: Props) {
     <div className="space-y-5">
       <div className="flex items-center justify-between text-sm">
         <span className="flex items-center gap-1.5 font-bold text-asha-teal">
-          <Check className="h-4 w-4" aria-hidden /> Visit saved · विज़िट सहेजी गई
+          <Check className="h-4 w-4" aria-hidden /> {s.visitSaved}
         </span>
-        <span className="text-asha-muted">आज · {timeOf(visit.visitedAt)}</span>
+        <span className="text-asha-muted">{s.today} · {timeOf(visit.visitedAt)}</span>
       </div>
 
       <section className="overflow-hidden rounded-3xl border border-asha-line bg-white" aria-label="Risk result">
@@ -38,22 +40,22 @@ export function RiskResult({ visit, events = [] }: Props) {
           <TriangleAlert className="h-7 w-7 shrink-0" aria-hidden />
           <div>
             <p className="text-xl font-extrabold leading-6 tracking-wide">{lv.label}</p>
-            <p className="text-base font-semibold leading-6">{lv.hindi}</p>
+            <p className="text-base font-semibold leading-6">{lv.advice}</p>
           </div>
         </div>
         <div className="space-y-4 p-5">
           <div>
             <h2 className="text-2xl font-extrabold leading-8">{b.name}</h2>
             <p className="text-base text-asha-muted">
-              {[b.village, b.weeks != null ? `${b.weeks} सप्ताह` : null, b.firstPregnancy === false ? 'पहली pregnancy नहीं' : b.firstPregnancy ? 'पहली pregnancy' : null]
+              {[b.village, b.weeks != null ? s.weeksN(b.weeks) : null, b.firstPregnancy === false ? s.notFirst : b.firstPregnancy ? s.first : null]
                 .filter(Boolean)
                 .join(' · ')}
             </p>
           </div>
           <div className="grid grid-cols-3 gap-2">
             <Tile label="BP" hot={hot && v.bpSys != null} value={v.bpSys != null ? `${v.bpSys}/${v.bpDia}` : '—'} />
-            <Tile label="लक्षण" value={v.symptoms.length ? String(v.symptoms.length) : '—'} />
-            <Tile label="Hb" value={v.hb == null ? '— नहीं लिया' : `${v.hb}`} small={v.hb == null} />
+            <Tile label={s.tileSymptoms} value={v.symptoms.length ? String(v.symptoms.length) : '—'} />
+            <Tile label="Hb" value={v.hb == null ? s.hbNotTaken : `${v.hb}`} small={v.hb == null} />
           </div>
           {v.symptoms.length > 0 && <p className="text-sm text-asha-muted">{v.symptoms.map((s) => s.replace(/_/g, ' ')).join(', ')}</p>}
         </div>
@@ -61,7 +63,7 @@ export function RiskResult({ visit, events = [] }: Props) {
 
       {risk.reasons.length > 0 && (
         <section aria-label="Why this risk level">
-          <h3 className="mb-2 text-xl font-extrabold">क्यों {risk.level === 'urgent' ? 'urgent' : risk.level === 'high' ? 'high risk' : risk.level}?</h3>
+          <h3 className="mb-2 text-xl font-extrabold">{lv.why}</h3>
           <div className="space-y-4 rounded-2xl border border-asha-line bg-white p-4">
             {risk.reasons.map((r) => (
               <div key={r.code} className="space-y-2">
@@ -76,14 +78,14 @@ export function RiskResult({ visit, events = [] }: Props) {
                 )}
               </div>
             ))}
-            <p className="text-sm text-asha-muted">Rule {risk.rulesVersion} · यह AI ने तय नहीं किया, नियम से निकला है</p>
+            <p className="text-sm text-asha-muted">{s.ruleNote(risk.rulesVersion)}</p>
           </div>
         </section>
       )}
 
       {chips.length > 0 && (
         <section aria-label="What Saathi did">
-          <h3 className="mb-2 text-sm font-semibold text-asha-muted">साथी ने क्या किया</h3>
+          <h3 className="mb-2 text-sm font-semibold text-asha-muted">{s.didWhat}</h3>
           <ul className="flex flex-wrap gap-2">
             {chips.map((t) => (
               <li

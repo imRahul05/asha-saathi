@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Check, TriangleAlert, CalendarCheck, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/components/i18n/LanguageProvider';
 
 // A looping, scripted preview of one visit: speech -> structured record -> risk -> alert.
 // SAMPLE content only. It is an illustration, not live data.
@@ -13,6 +14,7 @@ const BARS = [0.5, 0.9, 0.4, 1, 0.65, 0.85, 0.35, 0.95, 0.55, 0.8, 0.45, 0.7, 0.
 
 export function DemoStage() {
   const [step, setStep] = useState(0);
+  const { s } = useLanguage();
 
   useEffect(() => {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -32,7 +34,7 @@ export function DemoStage() {
     <div
       className="relative mx-auto w-full max-w-md rounded-[2rem] bg-asha-cream p-5 text-asha-ink shadow-[0_30px_80px_rgba(0,0,0,0.35)] sm:p-6"
       role="img"
-      aria-label="Animated example: a spoken Hindi visit report becomes a recorded visit, a high-risk flag, and an alert sent to the doctor."
+      aria-label={`${s.demoSpoken} → ${s.demoRiskH} → ${s.demoDone}`}
     >
       {/* Voice line */}
       <div className="flex items-center gap-3">
@@ -51,15 +53,15 @@ export function DemoStage() {
       </div>
 
       <p className={cn('mt-4 text-xl font-semibold leading-8 sm:text-2xl sm:leading-9', reveal(0))}>
-        सुनीता जी के घर गई थी, सात महीने, BP 150 by 100, पैरों में सूजन है।
+        {s.demoSpoken}
       </p>
 
       {/* Extracted record */}
       <div className={cn('mt-5 grid grid-cols-3 gap-2', reveal(1))}>
         {[
           { k: 'BP', v: '150/100', hot: true },
-          { k: 'Weeks', v: '28' },
-          { k: 'Swelling', v: 'Feet' },
+          { k: s.demoWeeks, v: '28' },
+          { k: s.demoSwelling, v: s.demoFeet },
         ].map((c) => (
           <div key={c.k} className={cn('rounded-2xl px-3 py-2', c.hot ? 'bg-asha-red-soft' : 'bg-asha-sand')}>
             <p className={cn('text-xs font-medium', c.hot ? 'text-asha-red' : 'text-asha-muted')}>{c.k}</p>
@@ -72,18 +74,18 @@ export function DemoStage() {
       <div className={cn('mt-3 flex items-center gap-3 rounded-2xl bg-asha-red px-4 py-3 text-white', reveal(2))}>
         <TriangleAlert className="h-6 w-6 shrink-0" aria-hidden />
         <div>
-          <p className="text-base font-extrabold leading-5">High risk</p>
-          <p className="text-sm leading-5 text-white/85">BP is 140/90 or higher. Rule from ICMR guidance.</p>
+          <p className="text-base font-extrabold leading-5">{s.demoRiskH}</p>
+          <p className="text-sm leading-5 text-white/85">{s.demoRiskD}</p>
         </div>
       </div>
 
       {/* Confirmation by voice */}
       <div className={cn('mt-4 space-y-2', reveal(3))}>
         <p className="max-w-[85%] rounded-3xl rounded-tl-lg border border-asha-line bg-white px-4 py-2.5 text-base leading-6">
-          डॉक्टर को alert भेजूँ?
+          {s.demoAsk}
         </p>
         <p className={cn('ml-auto w-fit rounded-3xl rounded-tr-lg bg-asha-teal px-4 py-2.5 text-base text-white', reveal(4))}>
-          हाँ, भेज दो।
+          {s.demoYes}
         </p>
       </div>
 
@@ -92,9 +94,9 @@ export function DemoStage() {
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-asha-teal text-white">
           <Check className="h-5 w-5" aria-hidden />
         </span>
-        <p className="flex-1 text-sm font-semibold leading-5">Doctor alerted on WhatsApp</p>
+        <p className="flex-1 text-sm font-semibold leading-5">{s.demoDone}</p>
         <CalendarCheck className="h-5 w-5 text-asha-teal" aria-hidden />
-        <p className="text-sm font-semibold">Follow-up in 3 days</p>
+        <p className="text-sm font-semibold">{s.demoFollow}</p>
       </div>
     </div>
   );
