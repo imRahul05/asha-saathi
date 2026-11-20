@@ -1,5 +1,6 @@
 ---
 id: pmsma
+label: PMSMA guidelines (MoHFW)
 title: Pradhan Mantri Surakshit Matritva Abhiyan (PMSMA) - Guidelines for Implementation, MoHFW
 source_url: https://nhm.gov.in/images/pdf/programmes/maternal-health/guidelines/Pradhan_Mantri_Surakshit_Matritva_Abhiyan.pdf
 publisher: NHM / MoHFW

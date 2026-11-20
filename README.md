@@ -66,6 +66,18 @@ Rule thresholds come from the official documents we hold. See `knowledge/RULES_E
 
 Source: [docs/architecture.svg](docs/architecture.svg).
 
+## Guideline answers
+
+Health advice comes only from official Government of India documents (MoHFW, NHM, ICMR). Their verbatim quotes live in `knowledge/` and are loaded into the `kb_chunks` table. During a call the agent calls the `searchGuidelines` tool, answers in one or two sentences, and names the source ("according to the MoHFW guideline"). If nothing matches, it says it does not have the information and refers her to the ANM or Medical Officer. It never answers health questions from memory, never gives doses, and refuses off-topic requests, attempts to read its instructions, and requests for other people's data.
+
+```bash
+pnpm db:migrate && pnpm kb:ingest   # once, and after any knowledge change
+pnpm kb:verify                      # proves every quote is on its cited page of the official PDF
+pnpm kb:check                       # retrieval regression: right passage found, off-topic refused
+```
+
+See [knowledge/README.md](knowledge/README.md) for the quote rules and the update steps (also available as the `kb-update` skill).
+
 ## Doctor call
 
 For HIGH and URGENT visits the alert message carries a signed link (`/call/<token>`, valid 6 hours). The doctor taps it and joins a browser voice call with the ASHA over Agora RTC: no app, no account, audio only. The page shows the visit summary beside the call. The ASHA opens the same call from the "call doctor" button on the result card. Needs `PUBLIC_BASE_URL` set so the link is absolute.

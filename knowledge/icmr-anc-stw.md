@@ -1,5 +1,6 @@
 ---
 id: icmr-anc-stw
+label: ICMR guideline (antenatal care workflow)
 title: Standard Treatment Workflow (STW) for ANTE-NATAL MANAGEMENT OF NORMAL PREGNANCY (ICMR / DHR, December 2025 edition)
 source_url: https://www.icmr.gov.in/icmrobject/uploads/STWs/1771568619_ante-natalmanagementofnormalpregnancy-7.pdf
 publisher: ICMR

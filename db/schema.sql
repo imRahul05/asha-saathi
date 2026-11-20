@@ -111,3 +111,20 @@ create table if not exists events (
 );
 create index if not exists events_session_idx on events (session_id, id);
 create index if not exists events_recent_idx on events (id desc);
+
+-- Guideline passages for searchGuidelines. Every row is a verbatim quote from an official document (see knowledge/ and pnpm kb:verify).
+create table if not exists kb_chunks (
+  id         text primary key,
+  doc_id     text not null,
+  label      text not null,
+  title      text not null,
+  year       text,
+  heading    text not null,
+  page       text not null,
+  url        text not null,
+  content    text not null,
+  hash       text not null,
+  tsv        tsvector generated always as (to_tsvector('english', heading || ' ' || content)) stored
+);
+create index if not exists kb_chunks_tsv_idx on kb_chunks using gin (tsv);
+create index if not exists kb_chunks_doc_idx on kb_chunks (doc_id);
