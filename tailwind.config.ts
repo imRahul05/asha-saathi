@@ -14,12 +14,15 @@ const config: Config = {
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
         // Latin + Devanagari + Kannada, so Hindi/Kannada/English render in one line without tofu.
+        display: ['var(--font-display)', 'var(--font-deva)', 'var(--font-knda)', 'system-ui', 'sans-serif'],
         asha: ['var(--font-latin)', 'var(--font-deva)', 'var(--font-knda)', 'system-ui', 'sans-serif'],
       },
   		colors: {
         // ASHA Saathi palette (from the design mockups). Fixed values: these screens do not follow OS dark mode.
         asha: {
           cream: '#F6F0E4',
+          night: '#0F3A33',
+          'night-soft': '#16473F',
           sand: '#EFE8DA',
           paper: '#FFFFFF',
           line: '#E4DAC8',

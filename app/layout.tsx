@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Noto_Sans_Devanagari, Noto_Sans_Kannada } from 'next/font/google';
+import { Bricolage_Grotesque, Inter, Noto_Sans_Devanagari, Noto_Sans_Kannada } from 'next/font/google';
 import './globals.css';
 
 // One font stack for three scripts. Browsers fall back per glyph: Latin -> Devanagari -> Kannada.
 const latin = Inter({ subsets: ['latin'], variable: '--font-latin', display: 'swap' });
+// Display face for headings on the landing page (Latin only; Indic glyphs fall back to the Noto faces).
+const display = Bricolage_Grotesque({ subsets: ['latin'], variable: '--font-display', display: 'swap' });
 const deva = Noto_Sans_Devanagari({
   subsets: ['devanagari', 'latin'],
   weight: ['400', '500', '600', '700'],
@@ -45,7 +47,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="hi" className={`h-full ${latin.variable} ${deva.variable} ${knda.variable}`}>
+    <html lang="hi" className={`h-full ${latin.variable} ${display.variable} ${deva.variable} ${knda.variable}`}>
       <body className="h-full min-h-screen bg-asha-cream font-asha text-asha-ink antialiased">
         {children}
       </body>

@@ -213,3 +213,15 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .orb-ring, .orb-ring-d, .orb-breathe, .orb-think { animation: none; }
 }
+
+/* ---------- Landing: live voice bars ---------- */
+@keyframes bar-dance {
+  0%, 100% { transform: scaleY(0.25); }
+  50% { transform: scaleY(1); }
+}
+.voice-bar { transform-origin: center; animation: bar-dance 1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .voice-bar { animation: none; transform: scaleY(0.6); }
+}
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }

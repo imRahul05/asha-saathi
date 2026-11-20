@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { HeartPulse } from 'lucide-react';
 import { Orb } from './Orb';
 import { UI_TEXT } from '@/lib/asha/lang';
@@ -14,7 +15,10 @@ type StartScreenProps = {
 export function StartScreen({ isLoading, error, onStart }: StartScreenProps) {
   const t = UI_TEXT.hi;
   return (
-    <div className="mx-auto flex h-dvh w-full max-w-md flex-col lg:max-w-2xl items-center justify-between bg-asha-cream px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))] text-center">
+    <div className="relative mx-auto flex h-dvh w-full max-w-md flex-col lg:max-w-2xl items-center justify-between bg-asha-cream px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))] text-center">
+      <Link href="/" className="absolute left-4 top-4 rounded-full px-3 py-2 text-sm font-medium text-asha-muted underline underline-offset-4 hover:text-asha-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-asha-teal">
+        About ASHA Saathi
+      </Link>
       <div className="flex flex-col items-center gap-3">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-asha-teal text-white">
           <HeartPulse className="h-8 w-8" aria-hidden />
