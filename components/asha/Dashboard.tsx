@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useSnapshot } from '@/hooks/use-snapshot';
 import { RiskResult } from './RiskResult';
 import { AlertSent } from './AlertSent';
+import { useLanguage } from '@/components/i18n/LanguageProvider';
 import type { Snapshot } from '@/lib/snapshot-types';
 
 // Projector view: live, read-only. Everything on it comes from the database; nothing is sample data.
@@ -65,22 +66,23 @@ function Header({ snapshot }: { snapshot: Snapshot | null }) {
 
 function Body({ snapshot }: { snapshot: Snapshot }) {
   const { counts, visit, events, remaining } = snapshot;
+  const { s } = useLanguage();
   return (
     <div className="grid gap-5 lg:grid-cols-[1fr_1.2fr_22rem]">
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-3">
-          <Stat label="Visits आज" value={counts.visits} />
+          <Stat label={s.statVisits} value={counts.visits} />
           <Stat label="High risk" value={counts.highRisk} tone="red" />
-          <Stat label="Alerts भेजे" value={counts.alertsSent} />
+          <Stat label={s.statAlerts} value={counts.alertsSent} />
           <Stat label="Follow-ups" value={counts.followUps} />
         </div>
-        {visit && visit.alert && <AlertSent visit={visit} remaining={remaining} />}
-        {!visit && remaining.length > 0 && <AlertSent visit={EMPTY_VISIT} remaining={remaining} />}
+        {visit && visit.alert && <AlertSent visit={visit} remaining={remaining} s={s} />}
+        {!visit && remaining.length > 0 && <AlertSent visit={EMPTY_VISIT} remaining={remaining} s={s} />}
       </div>
 
       <div>
         {visit ? (
-          <RiskResult visit={visit} events={events} />
+          <RiskResult visit={visit} events={events} s={s} />
         ) : (
           <div className="rounded-3xl border border-dashed border-asha-line bg-white/60 p-10 text-center">
             <p className="text-xl font-extrabold">No visit recorded yet</p>

@@ -12,7 +12,8 @@ import type {
 import { ErrorBoundary } from './ErrorBoundary';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { StartScreen } from './asha/StartScreen';
-import { DEFAULT_LANGUAGE, isLangCode, type LangCode } from '@/lib/languages';
+import { DEFAULT_LANGUAGE, type LangCode } from '@/lib/languages';
+import { useLanguage } from '@/components/i18n/LanguageProvider';
 
 // Dynamically import the ConversationComponent with ssr disabled
 const ConversationComponent = dynamic(() => import('./ConversationComponent'), {
@@ -69,25 +70,9 @@ export default function LandingPage() {
   const [rtmClient, setRtmClient] = useState<RTMClient | null>(null);
   // Real reason the agent could not start (HTTP status + body), shown on screen instead of a vague banner.
   const [agentJoinError, setAgentJoinError] = useState<string | null>(null);
-  // Call language: remembered per browser. Fixed for the duration of a call.
-  const [language, setLanguage] = useState<LangCode>(DEFAULT_LANGUAGE);
+  // The language choice is shared with the whole site (and remembered in this browser). The call uses it and keeps it fixed until the call ends.
+  const { language, setLanguage: chooseLanguage, s } = useLanguage();
   const [callLanguage, setCallLanguage] = useState<LangCode>(DEFAULT_LANGUAGE);
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem('asha_language');
-      if (isLangCode(saved)) setLanguage(saved);
-    } catch {
-      /* storage unavailable: keep the default */
-    }
-  }, []);
-  const chooseLanguage = (code: LangCode) => {
-    setLanguage(code);
-    try {
-      window.localStorage.setItem('asha_language', code);
-    } catch {
-      /* ignore */
-    }
-  };
 
   const handleStartConversation = async () => {
     setIsLoading(true);
@@ -175,7 +160,7 @@ export default function LandingPage() {
       setAgoraData({ ...responseData, agentId: agentData?.agent_id });
       setShowConversation(true);
     } catch (err) {
-      setError('Failed to start conversation. Please try again.');
+      setError(s.startFailed);
       console.error('Error starting conversation:', err);
     } finally {
       setIsLoading(false);

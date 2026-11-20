@@ -57,8 +57,3 @@ export const DEFAULT_LANGUAGE: LangCode = 'hi';
 export function isLangCode(v: unknown): v is LangCode {
   return typeof v === 'string' && v in LANGUAGES;
 }
-
-/** Which of the screen's three label sets (Hindi, Kannada, English) to use for a call language. */
-export function uiLabelSet(code: LangCode): 'hi' | 'kn' | 'en' {
-  return code === 'hi' || code === 'mr' || code === 'auto' ? 'hi' : code === 'kn' ? 'kn' : 'en';
-}

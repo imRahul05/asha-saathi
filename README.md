@@ -84,6 +84,8 @@ For HIGH and URGENT visits the alert message carries a signed link (`/call/<toke
 
 ## Languages
 
+The whole interface (landing page, sign-in, start screen, call screen, result and alert cards) is written in nine languages: Hindi, English, Kannada, Tamil, Telugu, Gujarati, Bengali, Marathi and Malayalam. Pick one with the switcher in the landing page header or the language chips on the start screen; the choice is remembered in the browser and is also the call language. Auto keeps the last chosen interface language until it hears speech, then follows the script of what was spoken, and shows a rotating hello in every language while connecting. The texts are in `lib/i18n/` (English is the master; the compiler enforces that every language has every key) and were machine-written: **have native speakers review them**. Risk reasons from the rules engine and the alert text sent to the doctor stay in English by design.
+
 Pick the call language on the start screen: Hindi, English, Kannada, Tamil, Telugu, Gujarati, Bengali, Marathi or Malayalam. The speech recogniser is set per call (Deepgram nova-3 with that language's code) and the agent speaks the same language with the Murf voice. **Why not automatic detection:** Deepgram's multi mode mis-heard accented English as Telugu and Urdu, so "Auto (beta)" is kept only as an experiment.
 
 - **Tested with real calls (synthetic speech):** English, Tamil, Gujarati, Malayalam, plus Hindi and Kannada earlier. Telugu, Bengali and Marathi are configured but not yet tested.
