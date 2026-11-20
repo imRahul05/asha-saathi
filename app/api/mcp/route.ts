@@ -1,42 +1,15 @@
-// SPIKE: minimal MCP server (streamable HTTP) hosting ONE tool for Agora's managed LLM.
-// Auth: Bearer secret (MCP_SHARED_SECRET). Input validated with zod. Every call is logged.
+// MCP tool server for the voice agent. Agora's managed LLM calls these tools over streamable HTTP.
+// Auth: Bearer secret (MCP_SHARED_SECRET). Each call is scoped to one ASHA and one call (session) by headers
+// that our own agent-start route put into mcp_servers[].headers.
 import { createMcpHandler } from 'mcp-handler';
-import { timingSafeEqual } from 'node:crypto';
-import { z } from 'zod';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
+import { getDb } from '@/lib/db/client';
+import { firstAsha, getAsha } from '@/lib/db/repo';
+import { getNotifier } from '@/lib/notify';
+import { executeTool, TOOLS, type ToolContext } from '@/lib/tools';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-
-const EchoVisitInput = z.object({
-  bp_sys: z.number().int().min(50).max(300),
-  bp_dia: z.number().int().min(30).max(200),
-});
-
-const mcp = createMcpHandler((server) => {
-  server.registerTool(
-    'echoVisit',
-    {
-      title: 'Echo visit',
-      description:
-        'Save a blood pressure reading. Call this when the user gives a BP value or asks to save it. bp_sys is systolic (upper), bp_dia is diastolic (lower).',
-      inputSchema: EchoVisitInput,
-    },
-    async (args) => {
-      const t0 = Date.now();
-      const parsed = EchoVisitInput.safeParse(args);
-      if (!parsed.success) {
-        console.log('[mcp] echoVisit INVALID', JSON.stringify(args));
-        return { isError: true, content: [{ type: 'text', text: 'invalid input' }] };
-      }
-      console.log(
-        `[mcp] echoVisit bp_sys=${parsed.data.bp_sys} bp_dia=${parsed.data.bp_dia} ms=${Date.now() - t0}`,
-      );
-      return {
-        content: [{ type: 'text', text: JSON.stringify({ received: true, ...parsed.data }) }],
-      };
-    },
-  );
-});
 
 function authorized(req: Request): boolean {
   const secret = process.env.MCP_SHARED_SECRET;
@@ -47,16 +20,54 @@ function authorized(req: Request): boolean {
   return got.length === want.length && timingSafeEqual(got, want);
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function buildContext(req: Request): Promise<ToolContext | null> {
+  const db = getDb();
+  const headerAsha = req.headers.get('x-asha-id');
+  const asha = (headerAsha && UUID.test(headerAsha) ? await getAsha(db, headerAsha) : null) ?? (await firstAsha(db));
+  if (!asha) return null;
+  return {
+    db,
+    ashaId: asha.id,
+    sessionId: (req.headers.get('x-session') ?? '').slice(0, 120) || null,
+    turnId: randomUUID(),
+    notifier: getNotifier(),
+    now: () => new Date(),
+  };
+}
+
 async function handler(req: Request): Promise<Response> {
-  // Log header NAMES + method only (never values).
-  console.log(`[mcp] ${req.method} headers=${[...req.headers.keys()].join(',')}`);
   if (!authorized(req)) {
     console.log('[mcp] 401 unauthorized');
-    return new Response(JSON.stringify({ error: 'unauthorized' }), {
-      status: 401,
-      headers: { 'content-type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: { 'content-type': 'application/json' } });
   }
+  let ctx: ToolContext | null;
+  try {
+    ctx = await buildContext(req);
+  } catch (e) {
+    console.error('[mcp] database unavailable', e);
+    return new Response(JSON.stringify({ error: 'database unavailable' }), { status: 503, headers: { 'content-type': 'application/json' } });
+  }
+  if (!ctx) {
+    return new Response(JSON.stringify({ error: 'no ASHA is set up. Run pnpm db:seed or add one.' }), { status: 503, headers: { 'content-type': 'application/json' } });
+  }
+  const context = ctx;
+
+  const mcp = createMcpHandler((server) => {
+    // Our tools are defined generically (zod input, ToolResult output), so register through a loosely typed alias.
+    const register = server.registerTool.bind(server) as unknown as (
+      name: string,
+      config: { description: string; inputSchema: unknown },
+      cb: (args: unknown) => Promise<{ content: { type: 'text'; text: string }[] }>,
+    ) => void;
+    for (const tool of TOOLS) {
+      register(tool.name, { description: tool.description, inputSchema: tool.input }, async (args) => {
+        const result = await executeTool(tool as never, args, context);
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      });
+    }
+  });
   return mcp(req);
 }
 

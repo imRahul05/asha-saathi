@@ -78,6 +78,10 @@ export default function LandingPage() {
       // 1. Fetch RTC token + channel
       // console.log('Fetching Agora token...');
       const agoraResponse = await fetch('/api/generate-agora-token');
+      if (agoraResponse.status === 401) {
+        window.location.href = '/login'; // demo session expired or cleared
+        return;
+      }
       const responseData = await agoraResponse.json();
       // console.log('Agora token response: uid =', responseData.uid, 'channel =', responseData.channel);
 
@@ -90,9 +94,10 @@ export default function LandingPage() {
       // 2. Run agent invite and RTM setup in parallel — both only need the token response.
       //    RTM must be ready before ConversationComponent mounts so AgoraVoiceAI
       //    can subscribe immediately. Agent invite is non-fatal.
+      let blockedMessage: string | null = null; // the usage guard said "not now"
       const [agentData, rtm] = await Promise.all([
         // 2a. Start the AI agent
-        fetch(process.env.NEXT_PUBLIC_AGENT_ENDPOINT || '/api/invite-agent', {
+        fetch('/api/invite-agent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -101,6 +106,15 @@ export default function LandingPage() {
           } as ClientStartRequest),
         })
           .then(async (res) => {
+            if (res.status === 401) {
+              window.location.href = '/login';
+              return null;
+            }
+            if (res.status === 429) {
+              const b = await res.json().catch(() => ({}));
+              blockedMessage = b?.message ?? 'The demo is busy right now. Please try again in a few minutes.';
+              return null;
+            }
             if (!res.ok) {
               const body = await res.text().catch(() => '');
               setAgentJoinError(`Agent start failed (HTTP ${res.status}). ${body.slice(0, 240)}`);
@@ -127,6 +141,12 @@ export default function LandingPage() {
           return rtm;
         })(),
       ]);
+
+      if (blockedMessage) {
+        rtm.logout().catch(() => undefined);
+        setError(blockedMessage);
+        return;
+      }
 
       // 3. All dependencies ready — store state and show conversation
       setRtmClient(rtm);

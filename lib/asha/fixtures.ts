@@ -1,59 +1,32 @@
-// SAMPLE DATA ONLY. Replaced by /api/events and the database in the tools phase.
-export const SAMPLE_ASHA = {
-  name: 'Meena Kumari',
-  initials: 'मी',
-  role: 'ASHA',
-  phc: 'Kolar PHC',
-};
+// DEV ONLY. Used by the design preview at /preview (disabled in production). Never imported by real screens.
+import type { Snapshot } from '@/lib/snapshot-types';
 
-export const SAMPLE_STATS = { visitsToday: 4, highRisk: 1 };
-
-// ---- Visit result shapes. These mirror what recordVisit / draftAlert / sendAlert will return (zod schemas later). ----
-export type RiskLevel = 'normal' | 'watch' | 'high' | 'urgent';
-
-export type VisitResult = {
-  beneficiary: { name: string; village: string; weeks: number; firstPregnancy?: boolean };
-  vitals: { bpSys: number; bpDia: number; hb: number | null; symptoms: string[] };
-  risk: {
-    level: RiskLevel;
-    reasons: { text: string; citation?: { label: string; page?: string } }[];
-    rulesVersion: string;
-  };
-  /** Only ever filled from searchGuidelines results; null until the ASHA asks. Never invented. */
-  advice: string | null;
-  tools: { name: string; state: 'done' | 'waiting'; note?: string; ms?: number }[];
-  alert: { status: 'draft' | 'sent' | 'failed'; doctor: string; phc: string; message: string; sentAt?: string };
-  followUp: { note: string; month: string; day: string };
-  remaining: { name: string; village: string; status: 'Watch' | 'Normal' | 'Pending' }[];
-};
-
-export const SAMPLE_VISIT: VisitResult = {
-  beneficiary: { name: 'Sunita Devi', village: 'Narsapura', weeks: 28, firstPregnancy: false },
-  vitals: { bpSys: 150, bpDia: 100, hb: null, symptoms: ['Swelling in feet'] },
-  risk: {
-    level: 'high',
-    reasons: [{ text: 'BP is 140/90 or higher', citation: { label: 'ICMR STW · Antenatal' } }],
-    rulesVersion: 'anc.v1',
+export const DEV_SNAPSHOT: Snapshot = {
+  asha: { name: 'Meena Kumari', phcName: 'Kolar PHC', language: 'hi' },
+  counts: { visits: 1, highRisk: 1, alertsSent: 1, followUps: 1 },
+  visit: {
+    id: 'dev',
+    visitedAt: new Date().toISOString(),
+    beneficiary: { name: 'Sunita Devi', village: 'Narsapura', weeks: 28, age: 24, firstPregnancy: false },
+    vitals: { bpSys: 150, bpDia: 100, hb: null, symptoms: ['swelling_feet'] },
+    risk: {
+      level: 'high',
+      rulesVersion: 'anc.v1',
+      reasons: [{ code: 'BP_HIGH', level: 'high', text: 'BP 150/100 is 140/90 or higher. Repeat after 6 hours to confirm', citation: { label: 'ICMR STW · Antenatal management', page: '1' } }],
+    },
+    alert: { status: 'sent', doctor: 'Dr. Rao', phc: 'Kolar PHC', message: 'High risk ANC visit\nSunita Devi, Narsapura · 28 weeks\nBP 150/100, swelling in feet\nASHA: Meena Kumari · 11:42\nPlease review soon.', sentAt: new Date().toISOString(), error: null },
+    followUp: { dueDate: new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10), reason: 'recheck BP' },
   },
-  advice: null,
-  tools: [
-    { name: 'findBeneficiary', state: 'done', ms: 180 },
-    { name: 'recordVisit', state: 'done', ms: 240 },
-    { name: 'searchGuidelines', state: 'done', ms: 410 },
-    { name: 'draftAlert', state: 'waiting', note: 'waiting for “haan”' },
+  events: [
+    { id: 1, name: 'findBeneficiary', ok: true, ms: 180, note: '“Sunita” → 1 match', at: new Date().toISOString() },
+    { id: 2, name: 'recordVisit', ok: true, ms: 240, note: 'risk: high', at: new Date().toISOString() },
+    { id: 3, name: 'draftAlert', ok: true, ms: 95, note: 'draft ready, waiting for “haan”', at: new Date().toISOString() },
+    { id: 4, name: 'sendAlert', ok: true, ms: 620, note: 'sent via twilio', at: new Date().toISOString() },
   ],
-  alert: {
-    status: 'sent',
-    doctor: 'Dr. [name]',
-    phc: 'Kolar PHC',
-    message:
-      'High risk ANC visit\nSunita Devi, Narsapura · 28 weeks\nBP 150/100, swelling in feet\nASHA: Meena Kumari · 11:42\nPlease review soon.',
-    sentAt: '11:42',
-  },
-  followUp: { note: '3 days from now · recheck BP', month: 'NOV', day: '23' },
   remaining: [
     { name: 'Lakshmi B', village: 'Hosahalli', status: 'Watch' },
     { name: 'Asha Rani', village: 'Narsapura', status: 'Normal' },
     { name: 'Pooja K', village: 'Malur', status: 'Pending' },
   ],
+  serverTime: new Date().toISOString(),
 };

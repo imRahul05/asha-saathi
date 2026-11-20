@@ -181,7 +181,7 @@ lang: en
 ```
 
 Candidate sources:
-- ✅ **ICMR STW, antenatal management.** It lists high-risk criteria: age > 35 or < 19, parity > 4, Hb < 7 g%, BP > 140/90 on 2 occasions 6 h apart, APH. https://www.icmr.gov.in/icmrobject/uploads/STWs/1725952342_obg_antenatal_management.pdf
+- ✅ **ICMR STW, antenatal management.** It lists high-risk criteria: age > 35 or < 19, parity > 4, Hb < 7 g%, BP > 140/90 on 2 occasions 6 h apart, APH. https://www.icmr.gov.in/icmrobject/uploads/STWs/1725952342_obg_antenatal_management.pdf  (**20 Nov: this URL now returns 404.** The current official upload is https://www.icmr.gov.in/icmrobject/uploads/STWs/1771568619_ante-natalmanagementofnormalpregnancy-7.pdf, a one-page flowchart dated Dec 2025, so every citation is "page 1".)
 - ✅ **NHM CHO Booklet, Maternal Health** (testing, high-risk identification, referral). https://nhm.gov.in/New_Update-2022-23/MH/GUIDELINES-%20MH/CHO_Booklet_%20Maternal_Health-English.pdf
 - ✅ **PMSMA guidelines** (ASHA's role in high-risk pregnancy mobilisation). https://nhm.gov.in/images/pdf/programmes/maternal-health/guidelines/Pradhan_Mantri_Surakshit_Matritva_Abhiyan.pdf
 
@@ -289,7 +289,9 @@ export function assessAnc(v: VisitInput, b: Beneficiary): Risk {
 }
 ```
 
-🧪 The local agent adds any further danger signs (severe headache, blurred vision, convulsions, reduced foetal movement) **only after quoting them from an official PDF page** (prompt P-08).
+✅ **Evidence extracted (20 Nov, `knowledge/RULES_EVIDENCE.md`, verbatim with page numbers).** Only the ICMR STW contains clinical numbers (BP > 140/90 on 2 occasions 6 h apart, Hb < 7, age > 35 or < 19, parity > 4) and a danger-signal list (fever, persistent vomiting, breathlessness, bleeding, decreased foetal movement at > 28 weeks, leaking fluid, severe headache / blurred vision / convulsion). The NHM CHO booklet and PMSMA state no thresholds.
+
+**Implemented as `lib/rules/anc.v1.ts`.** Each rule carries evidence: `cited` (quote and page verified) or `pending` (not in the documents we hold, so the UI never shows a source for it). Pending rules: severe BP 160/110, anaemia below 11, swelling of face or hands. Recorded product decisions: a single reading of 140/90 or more is flagged HIGH with "repeat after 6 hours" (the source needs two readings); ">=" rather than ">"; either number triggers; the urgent-versus-high mapping of danger signs is ours. A clinician should review these before real use.
 
 ---
 

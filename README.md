@@ -1,201 +1,98 @@
-# Agora Conversational AI Next.js Quickstart
+# ASHA Saathi
 
-[![Build](https://github.com/AgoraIO-Conversational-AI/agent-quickstart-nextjs/actions/workflows/build-check.yml/badge.svg)](https://github.com/AgoraIO-Conversational-AI/agent-quickstart-nextjs/actions/workflows/build-check.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org/)
+A voice assistant for ASHA health workers in India. After a home visit the ASHA talks to it in Hindi, Kannada or English. It records the visit, flags danger signs with fixed clinical rules, and alerts the doctor on WhatsApp after she says yes.
 
-Build a production-style voice agent in minutes with Next.js and the Agora Conversational AI Engine, including voice agent visualizer ([Agent UIKit](https://agoraio-conversational-ai.github.io/agent-uikit/)), live transcript, and real-time pipeline latency via `AGENT_METRICS` ([Agent Toolkit](https://github.com/AgoraIO-Conversational-AI/agent-client-toolkit-ts)).
+Built for **Build with Agora, Bengaluru (Track 5: Voice AI for Bharat)** on Agora Conversational AI, Murf Falcon text-to-speech, Next.js and Neon Postgres.
 
-## Prerequisites
+## How an ASHA uses it
 
-- [Node.js 22+](https://nodejs.org/en/download/)
-- [pnpm](https://pnpm.io/installation)
-- [Agora CLI](https://github.com/AgoraIO-Community/cli)
+1. Open the app and tap the orange orb. No sign-up.
+2. Say who you visited and what you found: *"Sunita ji ke ghar gayi thi, saat mahine, BP 150 by 100, pairon mein sujan."*
+3. Saathi finds the mother, saves the visit and says the risk level and the main reason out loud.
+4. For high risk it asks *"Doctor ko alert bhejoon?"* Say *haan* and one WhatsApp message goes to the doctor. Saying it twice never sends two.
+5. Saathi books the follow-up visit. `Aaj ka kaam batao` lists what is left today.
 
-## Run It
+The screen shows the same thing the voice says: the saved visit, risk, the rule behind it, the alert and the follow-up. `/dashboard` is a read-only projector view of the live activity.
 
-Getting started is quick and easy: install the CLI _(skip if you already have it)_ , scaffold the Next.js quickstart using the Agora CLI, install dependencies, and run.
+## How it works
 
-1. **Install the Agora CLI and sign in**
-   _(skip if `agora` is already on your PATH)_:
+```
+Browser (mic + speaker) ── Agora RTC ──> Agora Conversational AI
+                                          ├─ speech recognition (Deepgram, Agora-managed)
+                                          ├─ language model     (gpt-4o-mini, Agora-managed)
+                                          └─ voice              (Murf Falcon, our key)
+                                              │  the model calls our tools over MCP
+                                              ▼
+                  Vercel (this app) /api/mcp ── tools ── Neon Postgres
+                       │                          └── risk rules (lib/rules/anc.v1.ts)
+                       └── /api/session/state, /api/dashboard  → screens read live data
+```
 
-   macOS and Linux:
+Why it is built this way:
 
-   ```bash
-   curl -fsSL https://raw.githubusercontent.com/AgoraIO/cli/main/install.sh | sh -s -- --add-to-path
-   ```
+- **The AI never decides risk.** `recordVisit` runs a deterministic, unit-tested rules function. The model only listens, speaks and calls tools. It cannot change a risk level.
+- **Two-step alerts.** `draftAlert` prepares the message and sends nothing. `sendAlert` needs the confirmation token, works once (atomic database claim), expires after 10 minutes and can be retried if delivery fails.
+- **Every number is validated.** Tool inputs are checked with zod, so a speech-recognition slip like BP 999 is rejected instead of saved.
+- **Everything is observable.** Each tool call is stored with its timing and shown in the dashboard timeline.
+- **Tools never throw.** A failure becomes a plain message the agent can say.
 
-   Windows PowerShell:
+## Evidence and honest limits
 
-   ```powershell
-   irm https://dl.agora.io/cli/install.ps1 | iex
-   ```
+Rule thresholds come from the official documents we hold. See `knowledge/RULES_EVIDENCE.md` for the verbatim quotes and page numbers (ICMR STW, NHM CHO booklet, PMSMA).
 
-   If the Windows install command fails in PowerShell, try running the macOS/Linux command from [Git Bash](https://git-scm.com/downloads/win), then open a new terminal and run `agora --help` to confirm the CLI is on your PATH.
+- **Cited** (quoted from ICMR STW page 1): BP above 140/90, Hb below 7, age under 19 or over 35, parity above 4, and the danger signs bleeding, convulsion, severe headache, blurred vision, reduced baby movement, fever, persistent vomiting, breathlessness and leaking fluid.
+- **Not in those documents, so shown without a source** (`pending` in `lib/rules/anc.v1.ts`): the 160/110 severe-BP level, anaemia below 11, and swelling of face or hands. The app never shows a citation for these.
+- **Product decisions a clinician should review:** the ICMR criterion is two BP readings 6 hours apart; we flag a single reading of 140/90 or more as high and tell the ASHA to repeat it after 6 hours. We treat 140 or 90 as the cut-off (the source writes "greater than"). Which danger signs are "urgent" rather than "high" is our mapping.
+- Saathi gives **decision support and referral, never a diagnosis**. Guideline Q&A (advice for the family) is not built yet, so it declines to give medical advice from memory.
 
-   Then verify and sign in:
+## Data and privacy
 
-   ```bash
-   agora --help
-   agora login
-   ```
+- Stores: ASHAs, registered mothers (name, village, age, parity, last period), visits, alerts, follow-ups and tool-call events, all in your Neon database.
+- **Demo sign-in, no passwords.** `/login` has one button, "Continue as demo ASHA". It creates a private copy of the seeded ASHA and her six mothers for that visitor and sets a signed, HttpOnly cookie. Visitors never see each other's data, and demo accounts are deleted after 24 hours. The app, the token route, the agent start route and the call-state route all require this session, and the ASHA is taken from the session, never from the request.
+- **Usage guard.** Agent starts are capped per visitor, per IP and per day (`AGENT_STARTS_PER_ASHA_HOUR`, `AGENT_STARTS_PER_IP_HOUR`, `AGENT_STARTS_PER_DAY`) and a call ends by itself after 12 minutes, so the free 300 agent-minutes cannot be burned by one person.
+- Real accounts for health workers (phone OTP or a code issued by the health centre) are not built yet.
+- `/dashboard` shows real patient data. **Set `DASHBOARD_KEY` in production** and open `/dashboard?key=...`.
+- Use made-up data in demos. Do not seed real patients without proper consent and access control.
 
-   If `agora --help` is not found after install, close and reopen your terminal, then try again. If it still fails, check that the installer-added Agora CLI location is on your shell `PATH`.
+## Run it
 
-2. **Scaffold and run**
-   `agora init` clones the starter, binds an Agora project, and writes `.env.local`. (replace `my-nextjs-demo` with your own project name):
-
-   ```bash
-   agora init my-nextjs-demo --template nextjs
-   cd my-nextjs-demo
-   pnpm install
-   pnpm dev
-   ```
-
-3. Open [http://localhost:3000](http://localhost:3000) and click **Start conversation**.
-
-If the agent does not join or transcripts do not appear, run **`agora project doctor --deep`** to check credentials, feature enablement, network reachability, and local env binding.
-
-### Working from a clone of this repository
-
-Use this path if you already cloned **this** repo (for example to contribute or fork):
+Requirements: Node 22+, pnpm, an Agora project, a Murf API key, a Neon database.
 
 ```bash
-git clone https://github.com/AgoraIO-Conversational-AI/agent-quickstart-nextjs.git
-cd agent-quickstart-nextjs
-agora login
-agora project use <your-project>
 pnpm install
-agora project env write .env.local
-agora project doctor --deep
-pnpm dev
+cp env.local.example .env.local       # fill in the values (see the comments in that file)
+pnpm db:migrate                       # create the tables (safe to repeat)
+pnpm db:seed                          # one ASHA and six registered mothers (set SEED_DOCTOR_PHONE first)
+pnpm dev                              # http://localhost:3000  (landing)  /app  (the voice app)
 ```
 
-### Deploy to Vercel
+Agora cannot call `localhost`, so the voice agent needs a public `PUBLIC_BASE_URL` (a tunnel such as `cloudflared tunnel --url http://localhost:3000`, or your Vercel URL).
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FAgoraIO-Conversational-AI%2Fagent-quickstart-nextjs&project-name=agent-quickstart-nextjs&repository-name=agent-quickstart-nextjs&env=NEXT_PUBLIC_AGORA_APP_ID,NEXT_AGORA_APP_CERTIFICATE&envDescription=Agora%20credentials%20needed%20to%20run%20the%20app&envLink=https%3A%2F%2Fgithub.com%2FAgoraIO-Conversational-AI%2Fagent-quickstart-nextjs%23run-it&demo-title=Agora%20Conversational%20AI%20Next.js%20Quickstart&demo-description=Official%20Next.js%20quickstart%20for%20building%20browser-based%20voice%20AI%20with%20Agora&demo-image=https%3A%2F%2Fraw.githubusercontent.com%2FAgoraIO-Conversational-AI%2Fagent-quickstart-nextjs%2Fmain%2F.github%2Fassets%2FConversation-Ai-Client.gif)
+Deploy: `vercel deploy --prod`, with the same variables set in Vercel (Production and Preview) and Deployment Protection off for the production URL.
 
-To populate Vercel env vars from your bound Agora project:
+### Checks
 
 ```bash
-agora project use <your-project>
-agora project env write .env.local
-rg "^(NEXT_PUBLIC_AGORA_APP_ID|NEXT_AGORA_APP_CERTIFICATE)=" .env.local
+pnpm test            # 84 tests: rules, tools + database (embedded Postgres), MCP over JSON-RPC, snapshots
+pnpm typecheck
+pnpm verify:mcp https://<your-app> $MCP_SHARED_SECRET           # read-only check of a running server
+pnpm verify:mcp https://<your-app> $MCP_SHARED_SECRET --write   # also records a visit and sends one alert (creates data)
 ```
 
-Copy those two values into Vercel Project Settings -> Environment Variables.
+## Repo map
 
-### Environment variables
+| Path | What it is |
+|---|---|
+| `lib/rules/anc.v1.ts` | the risk rules (pure, tested) with cited or pending evidence per rule |
+| `lib/tools/` | the 7 tools the agent can call, and the registry both the server and the agent share |
+| `app/api/mcp/route.ts` | the MCP tool server Agora's model calls (Bearer secret, scoped to one ASHA and one call) |
+| `app/api/invite-agent/route.ts` | starts the voice agent (managed speech + model, Murf voice, our tools) |
+| `lib/db/`, `db/schema.sql` | database client (Neon or local Postgres), repository, schema |
+| `lib/snapshot.ts`, `app/api/session/state`, `app/api/dashboard` | what the screens read |
+| `components/landing/`, `components/asha/` | landing page, voice screen, result and dashboard screens |
+| `knowledge/` | verbatim guideline text with page numbers, and the rules evidence table |
+| `ARCHITECTURE.md`, `IMPLEMENTATION_PLAN.md` | design and plan |
 
-Defined in [`env.local.example`](env.local.example).
+## Not built yet
 
-| Variable                     | Required | Notes                                                            |
-| ---------------------------- | :------: | ---------------------------------------------------------------- |
-| `NEXT_PUBLIC_AGORA_APP_ID`   |    ✅    | Agora Console → Project → App ID.                                |
-| `NEXT_AGORA_APP_CERTIFICATE` |    ✅    | Agora Console → Project → App Certificate. **Server-side only.** |
-
-The default agent configuration in [`app/api/invite-agent/route.ts`](app/api/invite-agent/route.ts) uses Agora-managed STT, LLM, and TTS, so no extra vendor API keys are required for the base quickstart.
-
-## Commands
-
-```bash
-# Dev
-pnpm dev                # start the Next.js dev server
-
-# Quality
-pnpm run lint           # eslint
-pnpm run typecheck      # tsc --noEmit
-pnpm run doctor         # local prereqs + env binding
-
-# CI / pre-ship
-pnpm run verify:api     # API contract checks
-pnpm run build          # production build
-pnpm run verify         # doctor + lint + typecheck + verify:api + build
-```
-
-Run `pnpm run verify` before shipping changes — it covers local prerequisites, lint, type safety, the core API route contracts, and the production build.
-
-## Architecture
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./system-architecture-dark.svg">
-  <img src="./system-architecture.svg" alt="System architecture">
-</picture>
-
-The browser fetches a combined RTC + RTM token (`buildTokenWithRtm`) from this app, joins the channel using a single RTC client, and uses RTM as the data channel for transcript, agent state, metrics, and error events. The Conversational AI Engine joins the same channel as the shared agent UID in [`lib/agora.ts`](lib/agora.ts) and runs the STT → LLM → TTS pipeline in Agora Cloud.
-
-## What You Get
-
-- browser voice client built with Next.js App Router
-- RTC audio plus RTM transcript and state events
-- server routes for token generation, invite, and stop
-- [`AgentVisualizer`](https://agoraio-conversational-ai.github.io/agent-uikit/) for agent state and a built-in transcript panel for live turns
-- per-stage latency header driven by `AGENT_METRICS`
-- Agora-managed default STT, LLM, and TTS configuration
-
-## How It Works
-
-1. The browser requests an RTC + RTM token from `/api/generate-agora-token`.
-2. The backend invites an Agora cloud agent with `/api/invite-agent`.
-3. The browser joins the channel and publishes mic audio.
-4. The client receives transcript, agent state, and `AGENT_METRICS` (per-stage latency) events over RTM.
-5. On end, the client calls `/api/stop-conversation`, logs out RTM, and unmounts the call view so Agora React hooks clean up RTC publish/join and the local microphone track.
-
-## Optional BYOK
-
-The base `.env.local` contract contains only Agora credentials. If you are migrating from a supported provider, uncomment the matching snippet in [`app/api/invite-agent/route.ts`](app/api/invite-agent/route.ts) and add its variables to your local environment.
-
-```bash
-# Deepgram STT
-NEXT_DEEPGRAM_API_KEY=...
-
-# OpenAI-compatible LLM
-NEXT_LLM_URL=https://api.openai.com/v1/chat/completions
-NEXT_LLM_API_KEY=...
-
-# ElevenLabs TTS
-NEXT_ELEVENLABS_API_KEY=...
-NEXT_ELEVENLABS_VOICE_ID=...
-```
-
-## Repo Map
-
-- `app/api/generate-agora-token/route.ts` — issues RTC + RTM tokens
-- `app/api/invite-agent/route.ts` — starts the agent session and configures the pipeline
-- `app/api/stop-conversation/route.ts` — stops the agent session
-- `components/LandingPage.tsx` — entry point: token fetch, RTM login, conversation lifecycle
-- `components/ConversationComponent.tsx` — RTC client, transcript state, `AGENT_METRICS`, mic release
-- `components/QuickstartConversationLayout.tsx` — in-call header, transcript rail, controls dock
-- `components/QuickstartPipelineMetrics.tsx` — per-stage latency chips in the header
-- `components/QuickstartTranscriptPanel.tsx` — live transcript rail
-- `components/QuickstartPreCallCard.tsx` — pre-call hero card
-- `lib/chat-completions.ts` — server-side custom LLM SSE handler used by the chat completions route
-- `lib/conversation.ts` — transcript normalization and visualizer state mapping
-- `AGENTS.md` — primary agent-facing guide
-
-## Troubleshooting
-
-- **Agent does not join or transcripts are missing:** run `agora project doctor --deep`.
-- **`pnpm run doctor` fails:** run `agora project env write .env.local`, then retry.
-- **Manual clone / env values:** `agora project use <your-project>` then `agora project env write .env.local`.
-- **RTM login fails:** keep [`app/api/generate-agora-token/route.ts`](app/api/generate-agora-token/route.ts) on `RtcTokenBuilder.buildTokenWithRtm` — RTC-only tokens will not satisfy `rtm.login`.
-- **Transcript speakers inverted:** check the `uid === "0"` remap in [`components/ConversationComponent.tsx`](components/ConversationComponent.tsx).
-- **Agent never appears in channel:** ensure the shared agent UID in [`lib/agora.ts`](lib/agora.ts) is used by both the client and invite route.
-
-## More Docs
-
-- [docs/ai/L0_repo_card.md](./docs/ai/L0_repo_card.md)
-- [docs/ai/RECIPE.md](./docs/ai/RECIPE.md)
-- [AGENTS.md](./AGENTS.md)
-
-## Contributing
-
-Pull requests welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup and conventions.
-
-## Security
-
-Please do **not** open public issues for security reports. Email security@agora.io with details and reproduction steps.
-
-## License
-
-Released under the [MIT License](./LICENSE).
+Guideline Q&A with citations (RAG), real WhatsApp delivery (`NOTIFIER=twilio` is implemented but untested without credentials), an admin screen to register mothers (use `pnpm db:seed` or SQL for now), real accounts and roles, and the call transcript on the dashboard. See `NEXT_AGENT_PROMPTS.md` for the remaining work split into self-contained tasks.

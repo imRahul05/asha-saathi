@@ -10,6 +10,20 @@
 
 ---
 
+## Status (20 Nov 2026)
+
+| Phase | State |
+|---|---|
+| 0 Accounts, Hindi voice, managed LLM + MCP | Done. Murf Hindi voice works through Agora; managed gpt-4o-mini calls our MCP tools (spike); agent accepts `hi-IN,kn-IN,en-IN`. |
+| 1 Core skeleton | Done: zod schemas, DB schema + repository (Neon, local Postgres, embedded test Postgres), MCP route, system prompt, agent start route, `pnpm verify:mcp`. |
+| 2 Tools + rules | Done: 7 tools, `anc.v1` rules with cited or pending evidence, 69 tests, verified end-to-end on a real local Postgres. |
+| 3 RAG | Not started. Evidence text exists in `knowledge/`; chunking, retrieval and `searchGuidelines` remain. |
+| 4 Execute + follow-up | Two-phase alert, idempotent send and follow-ups are done with the console notifier. `NOTIFIER=twilio` is implemented but untested (needs Twilio credentials). |
+| 5 Dashboard UI | Done and live: voice screen, result panel, alert and follow-up, projector dashboard, all reading the database. Call transcript on the dashboard is not built. |
+| 6-7 Harden, rehearse | Not started. |
+
+Blocked on you: attach Neon (`DATABASE_URL`), then `pnpm db:migrate && pnpm db:seed`, deploy, and make one real call.
+
 ## Phase 0: Accounts + "it speaks Hindi" (Thu, ~2 h) **[GO / NO-GO]**
 
 | # | Task | Who |

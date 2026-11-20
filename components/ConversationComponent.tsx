@@ -35,11 +35,9 @@ import {
   type ConnectionIssue,
 } from './ConversationErrorCard';
 import { VoiceScreen } from './asha/VoiceScreen';
+import { useSnapshot } from '@/hooks/use-snapshot';
 import type { OrbState } from '@/lib/asha/lang';
-import {
-  QuickstartPipelineMetrics,
-  type QuickstartAgentMetric,
-} from './QuickstartPipelineMetrics';
+import { type QuickstartAgentMetric } from './QuickstartPipelineMetrics';
 import type { ConversationComponentProps } from '@/types/conversation';
 
 // Cap the displayed issues list to avoid overwhelming the UI during a cascade of errors.
@@ -111,7 +109,8 @@ export default function ConversationComponent({
     TranscriptHelperItem<Partial<UserTranscription | AgentTranscription>>[]
   >([]);
   const [agentState, setAgentState] = useState<AgentState | null>(null);
-  const [agentMetrics, setAgentMetrics] = useState<QuickstartAgentMetric[]>([]);
+  // Per-stage latency is collected for a future timing readout; not displayed yet.
+  const [, setAgentMetrics] = useState<QuickstartAgentMetric[]>([]);
   const [connectionIssues, setConnectionIssues] = useState<ConnectionIssue[]>(
     [],
   );
@@ -469,6 +468,11 @@ export default function ConversationComponent({
     return () => clearTimeout(timer);
   }, [isAgentConnected]);
 
+  // Live data for this call (saved visit, risk, alert, follow-up), read from our database.
+  const { snapshot, error: snapshotError } = useSnapshot(
+    `/api/session/state?channel=${encodeURIComponent(agoraData.channel)}`,
+  );
+
   const orbState = useMemo<OrbState>(() => {
     switch (visualizerState) {
       case 'disconnected':
@@ -512,6 +516,8 @@ export default function ConversationComponent({
         onEnd={handleEndConversation}
         micSelector={<MicrophoneSelector localMicrophoneTrack={localMicrophoneTrack} />}
         problem={problem}
+        snapshot={snapshot}
+        snapshotError={snapshotError}
       />
       {/* RemoteUser plays the agent's audio. It must stay mounted, but it is invisible. */}
       {remoteUsers.map((user) => (
