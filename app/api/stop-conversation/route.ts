@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AgoraClient, Area } from 'agora-agents';
 import { StopConversationRequest } from '@/types/conversation';
+import { requireSession } from '@/lib/auth/require';
 
 function isAgentAlreadyStoppingOrStopped(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
@@ -23,6 +24,8 @@ function isAgentAlreadyStoppingOrStopped(error: unknown): boolean {
 }
 
 export async function POST(request: Request) {
+  const auth = requireSession(request);
+  if (!auth.ok) return auth.response;
   try {
     const body: StopConversationRequest = await request.json();
     const { agent_id } = body;

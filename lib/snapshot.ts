@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/client';
-import { alertsForVisit, firstAsha, getAsha, latestVisit, listEvents, todayCounts, type EventRow, type Visit } from '@/lib/db/repo';
+import { alertsForVisit, firstAsha, getAsha, latestVisit, listEvents, mostRecentlyActiveAshaId, todayCounts, type EventRow, type Visit } from '@/lib/db/repo';
 import type { Snapshot, SnapshotEvent, SnapshotRemaining, SnapshotVisit } from '@/lib/snapshot-types';
 
 type Row = Record<string, unknown>;
@@ -77,12 +77,14 @@ async function remainingToday(db: Db, ashaId: string): Promise<SnapshotRemaining
  * the ASHA's most recent activity (the projector dashboard).
  */
 export async function getSnapshot(db: Db, opts: { sessionId?: string | null; ashaId?: string | null }): Promise<Snapshot> {
-  const asha = (opts.ashaId ? await getAsha(db, opts.ashaId) : null) ?? (await firstAsha(db));
+  // A signed-in call names its ASHA. The dashboard (no ASHA, no call) follows whoever used the app most recently.
+  const targetId = opts.ashaId ?? (opts.sessionId ? null : await mostRecentlyActiveAshaId(db));
+  const asha = (targetId ? await getAsha(db, targetId) : null) ?? (opts.ashaId ? null : await firstAsha(db));
   if (!asha) {
     return { asha: null, counts: { visits: 0, highRisk: 0, alertsSent: 0, followUps: 0 }, visit: null, events: [], remaining: [], serverTime: new Date().toISOString() };
   }
-  const visit = await latestVisit(db, { sessionId: opts.sessionId ?? null, ashaId: opts.sessionId ? null : asha.id });
-  let events = await listEvents(db, { sessionId: opts.sessionId ?? null, ashaId: opts.sessionId ? null : asha.id, limit: 200 });
+  const visit = await latestVisit(db, { sessionId: opts.sessionId ?? null, ashaId: asha.id });
+  let events = await listEvents(db, { sessionId: opts.sessionId ?? null, ashaId: asha.id, limit: 200 });
   events = events.slice(-12);
   const [counts, remaining, snapVisit] = await Promise.all([
     todayCounts(db, asha.id),

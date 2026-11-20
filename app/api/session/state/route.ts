@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb, hasDatabase } from '@/lib/db/client';
 import { getSnapshot } from '@/lib/snapshot';
+import { requireSession } from '@/lib/auth/require';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // Live state of ONE call: its latest visit, risk, alert, follow-up and tool timeline.
-// The channel name is random per call, so it acts as the key to that call's data.
+// Requires sign-in, and only returns data belonging to the signed-in ASHA.
 export async function GET(request: NextRequest) {
+  const auth = requireSession(request);
+  if (!auth.ok) return auth.response;
   const channel = request.nextUrl.searchParams.get('channel') ?? '';
-  const asha = request.nextUrl.searchParams.get('asha');
   if (!/^[\w.-]{6,120}$/.test(channel)) {
     return NextResponse.json({ error: 'channel is required' }, { status: 400 });
   }
@@ -17,7 +19,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'DATABASE_NOT_CONFIGURED' }, { status: 503 });
   }
   try {
-    const snapshot = await getSnapshot(getDb(), { sessionId: channel, ashaId: asha && /^[0-9a-f-]{36}$/i.test(asha) ? asha : null });
+    // Scoped to the signed-in ASHA: a call's data is never readable by another account.
+    const snapshot = await getSnapshot(getDb(), { sessionId: channel, ashaId: auth.session.ashaId });
     return NextResponse.json(snapshot, { headers: { 'Cache-Control': 'no-store' } });
   } catch (e) {
     console.error('[session/state]', e);

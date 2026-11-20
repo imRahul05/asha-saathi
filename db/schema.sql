@@ -13,6 +13,9 @@ create table if not exists ashas (
   created_at    timestamptz not null default now()
 );
 
+-- Demo visitors each get their own copy of the template ASHA, so nobody sees anyone else's data.
+alter table ashas add column if not exists is_demo boolean not null default false;
+
 create table if not exists beneficiaries (
   id          uuid primary key default gen_random_uuid(),
   asha_id     uuid not null references ashas(id) on delete cascade,
@@ -77,6 +80,18 @@ create table if not exists followups (
   created_at       timestamptz not null default now()
 );
 create index if not exists followups_due_idx on followups (asha_id, status, due_date);
+
+-- Usage guard: every agent start and demo sign-in is counted, so one visitor cannot burn the free Agora minutes.
+create table if not exists agent_starts (
+  id          bigserial primary key,
+  kind        text not null default 'agent' check (kind in ('agent', 'demo')),
+  asha_id     uuid,
+  ip_hash     text,
+  created_at  timestamptz not null default now()
+);
+create index if not exists agent_starts_time_idx on agent_starts (created_at desc);
+create index if not exists agent_starts_ip_idx on agent_starts (ip_hash, created_at desc);
+create index if not exists agent_starts_asha_idx on agent_starts (asha_id, created_at desc);
 
 -- Every turn and tool call. The dashboard timeline reads this.
 create table if not exists events (

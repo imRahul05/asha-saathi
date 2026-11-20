@@ -6,7 +6,9 @@ import { DEFAULT_AGENT_UID } from '@/lib/agora';
 import { buildSystemPrompt, FAILURE_MESSAGE, GREETING } from '@/lib/prompt';
 import { TOOL_NAMES } from '@/lib/tools';
 import { getDb, hasDatabase } from '@/lib/db/client';
-import { firstAsha, getAsha } from '@/lib/db/repo';
+import { getAsha } from '@/lib/db/repo';
+import { requireSession } from '@/lib/auth/require';
+import { clientIp, guardAgentStart, hashIp } from '@/lib/guard';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -17,7 +19,6 @@ const MANAGED_LLMS = ['gpt-4o-mini', 'gpt-4.1-mini', 'gpt-5-nano', 'gpt-5-mini']
 const Body = z.object({
   requester_id: z.string().min(1).max(40),
   channel_name: z.string().min(1).max(120),
-  asha_id: z.string().uuid().optional(),
 });
 
 function requireEnv(name: string): string {
@@ -27,21 +28,27 @@ function requireEnv(name: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = requireSession(request);
+  if (!auth.ok) return auth.response;
   try {
     const parsed = Body.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json({ error: 'requester_id and channel_name are required' }, { status: 400 });
     }
-    const { requester_id, channel_name, asha_id } = parsed.data;
+    const { requester_id, channel_name } = parsed.data;
 
-    // Which ASHA is calling. Used for the greeting context and so tool calls act on her mothers only.
-    let ashaId: string | undefined;
-    let ashaName: string | undefined;
-    if (hasDatabase()) {
-      const db = getDb();
-      const asha = (asha_id ? await getAsha(db, asha_id) : null) ?? (await firstAsha(db));
-      ashaId = asha?.id;
-      ashaName = asha?.name;
+    // The calling ASHA comes from the signed session, never from the request body, so tools only ever act on her mothers.
+    if (!hasDatabase()) return NextResponse.json({ error: 'DATABASE_NOT_CONFIGURED' }, { status: 503 });
+    const db = getDb();
+    const asha = await getAsha(db, auth.session.ashaId);
+    if (!asha) return NextResponse.json({ error: 'SIGN_IN_REQUIRED' }, { status: 401 });
+    const ashaId = asha.id;
+    const ashaName = asha.name;
+
+    // Usage guard: protects the free Agora minutes and Murf characters.
+    const allowed = await guardAgentStart(db, { ashaId, ipHash: hashIp(clientIp(request.headers)) });
+    if (!allowed.ok) {
+      return NextResponse.json({ error: 'RATE_LIMITED', message: allowed.message }, { status: 429, headers: { 'Retry-After': String(allowed.retryAfterSeconds) } });
     }
 
     const baseUrl = process.env.PUBLIC_BASE_URL ?? `https://${request.headers.get('host')}`;
@@ -90,7 +97,7 @@ export async function POST(request: NextRequest) {
               transport: 'streamable_http',
               headers: {
                 Authorization: `Bearer ${requireEnv('MCP_SHARED_SECRET')}`,
-                'X-Asha-Id': ashaId ?? '',
+                'X-Asha-Id': ashaId,
                 'X-Session': channel_name,
               },
               allowed_tools: TOOL_NAMES, // must match the server's tool names exactly
@@ -117,7 +124,7 @@ export async function POST(request: NextRequest) {
       agentUid: String(DEFAULT_AGENT_UID),
       remoteUids: [requester_id], // only this user's audio is processed
       idleTimeout: 60,
-      expiresIn: ExpiresIn.hours(1),
+      expiresIn: ExpiresIn.minutes(12), // a demo call ends on its own, so a forgotten tab cannot burn minutes
       debug: false,
     });
 

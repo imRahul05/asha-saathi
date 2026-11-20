@@ -48,7 +48,9 @@ Rule thresholds come from the official documents we hold. See `knowledge/RULES_E
 ## Data and privacy
 
 - Stores: ASHAs, registered mothers (name, village, age, parity, last period), visits, alerts, follow-ups and tool-call events, all in your Neon database.
-- No login yet. The demo uses one seeded ASHA. A call's data is reachable only through its random channel name.
+- **Demo sign-in, no passwords.** `/login` has one button, "Continue as demo ASHA". It creates a private copy of the seeded ASHA and her six mothers for that visitor and sets a signed, HttpOnly cookie. Visitors never see each other's data, and demo accounts are deleted after 24 hours. The app, the token route, the agent start route and the call-state route all require this session, and the ASHA is taken from the session, never from the request.
+- **Usage guard.** Agent starts are capped per visitor, per IP and per day (`AGENT_STARTS_PER_ASHA_HOUR`, `AGENT_STARTS_PER_IP_HOUR`, `AGENT_STARTS_PER_DAY`) and a call ends by itself after 12 minutes, so the free 300 agent-minutes cannot be burned by one person.
+- Real accounts for health workers (phone OTP or a code issued by the health centre) are not built yet.
 - `/dashboard` shows real patient data. **Set `DASHBOARD_KEY` in production** and open `/dashboard?key=...`.
 - Use made-up data in demos. Do not seed real patients without proper consent and access control.
 
@@ -71,7 +73,7 @@ Deploy: `vercel deploy --prod`, with the same variables set in Vercel (Productio
 ### Checks
 
 ```bash
-pnpm test            # 69 tests: rules, tools + database (embedded Postgres), MCP over JSON-RPC, snapshots
+pnpm test            # 84 tests: rules, tools + database (embedded Postgres), MCP over JSON-RPC, snapshots
 pnpm typecheck
 pnpm verify:mcp https://<your-app> $MCP_SHARED_SECRET           # read-only check of a running server
 pnpm verify:mcp https://<your-app> $MCP_SHARED_SECRET --write   # also records a visit and sends one alert (creates data)
@@ -93,4 +95,4 @@ pnpm verify:mcp https://<your-app> $MCP_SHARED_SECRET --write   # also records a
 
 ## Not built yet
 
-Guideline Q&A with citations (RAG), real WhatsApp delivery (`NOTIFIER=twilio` is implemented but untested without credentials), an admin screen to register mothers (use `pnpm db:seed` or SQL for now), login and roles, and the call transcript on the dashboard.
+Guideline Q&A with citations (RAG), real WhatsApp delivery (`NOTIFIER=twilio` is implemented but untested without credentials), an admin screen to register mothers (use `pnpm db:seed` or SQL for now), real accounts and roles, and the call transcript on the dashboard. See `NEXT_AGENT_PROMPTS.md` for the remaining work split into self-contained tasks.

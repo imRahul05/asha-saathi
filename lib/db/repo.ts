@@ -69,8 +69,14 @@ export async function getAsha(db: Db, id: string): Promise<Asha | null> {
   return rows[0] ? toAsha(rows[0]) : null;
 }
 export async function firstAsha(db: Db): Promise<Asha | null> {
-  const rows = await db.query<Row>('select * from ashas order by created_at asc limit 1');
+  const rows = await db.query<Row>('select * from ashas where not is_demo order by created_at asc limit 1');
   return rows[0] ? toAsha(rows[0]) : null;
+}
+
+/** The ASHA behind the most recent tool call. The projector dashboard follows whoever is currently using the app. */
+export async function mostRecentlyActiveAshaId(db: Db): Promise<string | null> {
+  const rows = await db.query<{ asha_id: string | null }>('select asha_id from events where asha_id is not null order by id desc limit 1');
+  return rows[0]?.asha_id ?? null;
 }
 
 // ---------- beneficiaries ----------
@@ -274,7 +280,9 @@ export async function listEvents(db: Db, opts: { sessionId?: string | null; asha
 /** The visit most recently recorded in a call (or, with no session, the ASHA's most recent visit). */
 export async function latestVisit(db: Db, opts: { sessionId?: string | null; ashaId?: string | null }): Promise<Visit | null> {
   const rows = opts.sessionId
-    ? await db.query<Row>('select * from visits where session_id = $1 order by visited_at desc limit 1', [opts.sessionId])
+    ? opts.ashaId
+      ? await db.query<Row>('select * from visits where session_id = $1 and asha_id = $2 order by visited_at desc limit 1', [opts.sessionId, opts.ashaId])
+      : await db.query<Row>('select * from visits where session_id = $1 order by visited_at desc limit 1', [opts.sessionId])
     : opts.ashaId
       ? await db.query<Row>('select * from visits where asha_id = $1 order by visited_at desc limit 1', [opts.ashaId])
       : await db.query<Row>('select * from visits order by visited_at desc limit 1');
