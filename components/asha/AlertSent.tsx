@@ -13,6 +13,10 @@ const STATUS_PILL: Record<SnapshotRemaining['status'], string> = {
   Pending: 'bg-asha-sand text-asha-muted',
 };
 
+// provider is stored like "twilio-sms", "twilio-whatsapp" or "console"
+const channelLabel = (p: string | null) =>
+  p === 'telegram' ? 'Telegram' : p?.endsWith('sms') ? 'SMS' : p?.endsWith('whatsapp') ? 'WhatsApp' : p === 'console' ? 'screen (test mode)' : 'message';
+
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 function daysFromToday(isoDate: string): number {
   const today = new Date();
@@ -36,7 +40,7 @@ export function AlertSent({ visit, remaining }: Props) {
             </span>
             <h2 className="text-3xl font-extrabold">{failed ? 'Alert नहीं गया' : draft ? 'Alert तैयार है' : 'Alert भेज दिया'}</h2>
             <p className="text-base text-asha-muted">
-              {[alert.doctor, alert.phc].filter(Boolean).join(' · ')} {failed ? 'को नहीं पहुँचा' : draft ? 'को भेजने के लिए आपकी हाँ चाहिए' : 'को WhatsApp पर'}
+              {[alert.doctor, alert.phc].filter(Boolean).join(' · ')} {failed ? 'को नहीं पहुँचा' : draft ? 'को भेजने के लिए आपकी हाँ चाहिए' : `को ${channelLabel(alert.channel)} पर`}
             </p>
           </div>
 

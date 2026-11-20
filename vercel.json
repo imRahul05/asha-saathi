@@ -11,5 +11,8 @@
   "github": {
     "silent": true,
     "autoAlias": true
-  }
+  },
+  "regions": [
+    "bom1"
+  ]
 }

@@ -4,7 +4,7 @@ Paste these one at a time into your local coding agent (Claude Code, Cursor, etc
 
 **Paste this preamble first, once per session:**
 
-> You are working in a Next.js 16 repo based on `AgoraIO-Conversational-AI/agent-quickstart-nextjs`, for a hackathon voice agent called ASHA Saathi. Read `ARCHITECTURE.md` and `IMPLEMENTATION_PLAN.md` in the repo root first. Rules:
+> You are working in a Next.js 16 repo based on `AgoraIO-Conversational-AI/agent-quickstart-nextjs`, for a hackathon voice agent called ASHA Saathi. Read `docs/ARCHITECTURE.md` and `docs/IMPLEMENTATION_PLAN.md` first. Rules:
 > 1. Never commit secrets. Keys go only in `.env.local` (gitignored) and Vercel env vars.
 > 2. Do not "assume it works". Run the command and paste the real output.
 > 3. If a step fails twice, stop and report the exact error. Don't improvise a workaround that changes the architecture.

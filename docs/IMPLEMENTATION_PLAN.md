@@ -1,6 +1,6 @@
 # ASHA Saathi: Implementation Plan
 
-> Read `ARCHITECTURE.md` first. Tasks marked **[LOCAL P-xx]** need your keys, phone or browser. Paste the matching prompt from `LOCAL_AGENT_PROMPTS.md` into your local coding agent; it will run the commands and report back.
+> Read `docs/ARCHITECTURE.md` first. Tasks marked **[LOCAL P-xx]** need your keys, phone or browser. Paste the matching prompt from `LOCAL_AGENT_PROMPTS.md` into your local coding agent; it will run the commands and report back.
 > Tasks marked **[CLAUDE]** I can write here, in the cloud workspace. I'll push code to a GitHub repo you create, or send you the files.
 >
 > **Revision 2 (20 Nov 2026), Option A:** Agora's managed LLM + managed Deepgram run the conversation, Murf is TTS, and **our Vercel app is only the MCP tool server**, the DB and the dashboard. The AI Gateway and the custom-LLM route are off the critical path (fallback = Option B, ARCHITECTURE §8.1). Sources: https://docs.agora.io/en/ai/build/managed-mode.md · https://docs.agora.io/en/ai/build/tools/mcp-tools.md · https://docs.agora.io/en/ai/models/tts/murf.md · https://docs.agora.io/en/ai/reference/pricing.md

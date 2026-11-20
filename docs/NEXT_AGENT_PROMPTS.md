@@ -17,7 +17,7 @@ Do A, B, C in parallel. D after A/B land (it tunes the prompt and tests the whol
 
 ## Shared context (paste this first in every task)
 
-> You are working on ASHA Saathi, a Next.js 16 + TypeScript voice assistant for ASHA health workers, deployed on Vercel at https://asha-saathi-mocha.vercel.app. Repo: `imRahul05/asha-saathi`. Read `README.md`, `ARCHITECTURE.md` (sections 7, 8, 9) and `knowledge/RULES_EVIDENCE.md` first.
+> You are working on ASHA Saathi, a Next.js 16 + TypeScript voice assistant for ASHA health workers, deployed on Vercel at https://asha-saathi-mocha.vercel.app. Repo: `imRahul05/asha-saathi`. Read `README.md`, `docs/ARCHITECTURE.md` (sections 7, 8, 9) and `knowledge/RULES_EVIDENCE.md` first.
 >
 > How it works: Agora's managed LLM talks to our MCP tool server (`app/api/mcp/route.ts`), which runs tools from `lib/tools/` against a Neon Postgres database through `lib/db/repo.ts`. Risk is decided by `lib/rules/anc.v1.ts` (never by the model). Screens read live data from `lib/snapshot.ts` via `/api/session/state` and `/api/dashboard`. Sign-in is a signed cookie (`lib/auth/`); every route that costs money or shows data requires it.
 >
@@ -123,4 +123,4 @@ Do A, B, C in parallel. D after A/B land (it tunes the prompt and tests the whol
 
 ## Task F: Pitch (mostly you)
 
-> The 3-minute script is in `IMPLEMENTATION_PLAN.md` (Phase 7). Things to prepare: a 90-second backup screen recording with audio of the best run; the one-sentence safety line ("the AI never decides who is high risk; written rules do, and every alert needs a spoken yes"); an honest limits slide (BP single-reading decision and the three rules without a source; see README "Evidence and honest limits"); the architecture diagram from `README.md`; and a rehearsal with the usage limits reset (`pnpm demo:reset` after Task D). Quote no statistic unless you can name its source.
+> The 3-minute script is in `docs/IMPLEMENTATION_PLAN.md` (Phase 7). Things to prepare: a 90-second backup screen recording with audio of the best run; the one-sentence safety line ("the AI never decides who is high risk; written rules do, and every alert needs a spoken yes"); an honest limits slide (BP single-reading decision and the three rules without a source; see README "Evidence and honest limits"); the architecture diagram from `README.md`; and a rehearsal with the usage limits reset (`pnpm demo:reset` after Task D). Quote no statistic unless you can name its source.

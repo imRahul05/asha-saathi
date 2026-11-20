@@ -2,7 +2,7 @@ import { randomInt } from 'node:crypto';
 import { z } from 'zod';
 import { assessAnc } from '@/lib/rules/anc.v1';
 import { RecordVisitInput, Uuid, type Risk } from '@/lib/schemas';
-import { composeAlertMessage } from '@/lib/alerts/message';
+import { composeAlertMessage, composeSmsText } from '@/lib/alerts/message';
 import {
   alertsForVisit, claimAlertForSending, findBeneficiaries, findRecentDuplicateVisit, getAlertByToken, getAsha, getBeneficiary,
   getVisit, insertAlertDraft, insertFollowUp, insertVisit, markAlertFailed, markAlertSent, pendingFollowUps, recentVisits, todayCounts,
@@ -47,14 +47,17 @@ const mustBeneficiary = async (ctx: ToolContext, id: string): Promise<Beneficiar
 export const findBeneficiary = defineTool({
   name: 'findBeneficiary',
   description:
-    'Find a registered mother by name. Call this first whenever the ASHA names someone. Pass the name in English letters (e.g. "Sunita"), even if it was spoken in Hindi or Kannada. If several match, ask the ASHA which one (use village).',
+    'Find a registered mother by name. Call this first whenever the ASHA names someone. Pass the FULL name exactly as she said it, including the surname or "devi"/"kumari" if given (e.g. "Sunita Devi"), and the village if she mentioned it, in English letters even if it was spoken in Hindi or Kannada. Never shorten a full name to the first name. If several match, ask the ASHA which one (use village).',
   input: z.object({ name: z.string().min(1).max(80), village: z.string().max(80).optional() }),
   async run({ name, village }, ctx) {
     const found = await findBeneficiaries(ctx.db, ctx.ashaId, name.trim(), village?.trim());
     const matches = found.map((b) => ({
       id: b.id, name: b.name, village: b.village, age: b.age, weeks: weeksFromLmp(b.lmp, ctx.now()), score: Math.round(b.score * 100) / 100,
     }));
-    const suggestion = matches.length === 0 ? 'not_found' : matches.length === 1 ? 'unique' : 'ask_which';
+    // "Sunita Devi" must not trigger "which Sunita?" just because "Sunita Kumari" also looks similar:
+    // when the best match is clearly ahead of the runner-up, treat it as the one.
+    const clearWinner = matches.length > 1 && matches[0].score - matches[1].score >= 0.2;
+    const suggestion = matches.length === 0 ? 'not_found' : matches.length === 1 || clearWinner ? 'unique' : 'ask_which';
     return {
       count: matches.length,
       matches,
@@ -62,7 +65,7 @@ export const findBeneficiary = defineTool({
       hint:
         suggestion === 'not_found' ? 'No match. Ask the ASHA to repeat the name or say the village.'
         : suggestion === 'ask_which' ? 'Several mothers match. Ask which one, naming the villages.'
-        : 'One match. Continue with its id.',
+        : 'The first match is the mother. Continue with its id without asking again.',
     };
   },
 });
@@ -165,7 +168,7 @@ export const draftAlert = defineTool({
       throw new ToolError('NO_DOCTOR', 'डॉक्टर का नंबर सेव नहीं है।', 'This ASHA has no doctor phone saved. Tell her an admin must add it.');
     }
     const draft = open ?? (await insertAlertDraft(ctx.db, {
-      visitId: visit.id, toName: asha.doctorName, toPhone: asha.doctorPhone, message: composeAlertMessage(visit, b, asha, ctx.now()),
+      visitId: visit.id, toName: asha.doctorName, toPhone: asha.doctorPhone, message: composeAlertMessage(visit, b, asha, ctx.now()), smsText: composeSmsText(visit, b, asha, ctx.now()),
       token: newToken(), ttlMinutes: ALERT_TTL_MINUTES,
     }));
     return {
@@ -198,9 +201,10 @@ export const sendAlert = defineTool({
       throw new ToolError('EXPIRED', 'यह alert पुराना हो गया है, दोबारा तैयार करना होगा।', 'The draft expired (10 minutes). Call draftAlert again.');
     }
     try {
-      const res = await ctx.notifier.send({ name: claimed.toName, phone: claimed.toPhone }, claimed.message);
-      await markAlertSent(ctx.db, claimed.id, ctx.notifier.name, res.providerId);
-      return { status: 'sent' as const, alreadySent: false, provider: ctx.notifier.name, sentAt: claimed.sentAt };
+      const res = await ctx.notifier.send({ name: claimed.toName, phone: claimed.toPhone }, claimed.message, { sms: claimed.smsText ?? undefined });
+      const provider = res.channel ?? ctx.notifier.name; // e.g. telegram, twilio-whatsapp, twilio-sms, console
+      await markAlertSent(ctx.db, claimed.id, provider, res.providerId);
+      return { status: 'sent' as const, alreadySent: false, provider, sentAt: claimed.sentAt };
     } catch (e) {
       await markAlertFailed(ctx.db, claimed.id, e instanceof Error ? e.message : String(e));
       throw new ToolError('SEND_FAILED', 'Alert भेजा नहीं जा सका, दोबारा कोशिश करेंगे।', 'The message could not be delivered. The draft is kept: you can call sendAlert again with the same token.');
