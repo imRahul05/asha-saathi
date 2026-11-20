@@ -17,7 +17,7 @@ type OrbProps = {
 export function Orb({ state, label, onClick, disabled, size = 'lg', ariaLabel }: OrbProps) {
   const waiting = state === 'joining' || state === 'not-joined';
   const active = state === 'listening' || state === 'speaking';
-  const dim = size === 'lg' ? 'h-40 w-40' : 'h-24 w-24';
+  const dim = size === 'lg' ? 'h-40 w-40 lg:h-56 lg:w-56' : 'h-24 w-24';
 
   const tone =
     state === 'speaking'
@@ -59,11 +59,11 @@ export function Orb({ state, label, onClick, disabled, size = 'lg', ariaLabel }:
           ) : state === 'muted' || state === 'disconnected' ? (
             <MicOff className="h-10 w-10" aria-hidden />
           ) : (
-            <Mic className={size === 'lg' ? 'h-12 w-12' : 'h-8 w-8'} aria-hidden />
+            <Mic className={size === 'lg' ? 'h-12 w-12 lg:h-16 lg:w-16' : 'h-8 w-8'} aria-hidden />
           )}
         </button>
       </div>
-      <p className="min-h-8 text-center text-2xl font-bold leading-8 text-asha-ink" aria-live="polite">
+      <p className="min-h-8 text-center text-2xl font-bold leading-8 text-asha-ink lg:text-3xl" aria-live="polite">
         {label}
       </p>
     </div>

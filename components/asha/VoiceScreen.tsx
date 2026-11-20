@@ -74,48 +74,52 @@ export function VoiceScreen({
   const orbClickable = orbState !== 'joining' && orbState !== 'not-joined' && orbState !== 'disconnected';
 
   return (
-    <div className="mx-auto flex h-dvh w-full max-w-md flex-col bg-asha-cream pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
+    // Phone: one column, one screen. Desktop (lg+): full-width grid, conversation left, big orb in the main area.
+    <div className="mx-auto flex h-dvh w-full max-w-md flex-col bg-asha-cream pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] lg:grid lg:max-w-7xl lg:grid-cols-[minmax(24rem,30rem)_1fr] lg:grid-rows-[auto_auto_auto_minmax(0,1fr)] lg:gap-x-10 lg:px-10 lg:pb-8">
       {/* Header: who is signed in + detected language */}
-      <header className="flex items-center justify-between gap-3 px-4 pb-2 pt-4">
+      <header className="flex items-center justify-between gap-3 px-4 pb-2 pt-4 lg:col-span-2 lg:px-0 lg:pt-8">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-asha-teal text-lg font-bold text-white">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-asha-teal text-lg font-bold text-white lg:h-14 lg:w-14 lg:text-xl">
             {SAMPLE_ASHA.initials}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-lg font-bold leading-6">{SAMPLE_ASHA.name}</p>
+            <p className="truncate text-lg font-bold leading-6 lg:text-xl">{SAMPLE_ASHA.name}</p>
             <p className="truncate text-sm text-asha-muted">
               {SAMPLE_ASHA.role} · {SAMPLE_ASHA.phc}
             </p>
           </div>
         </div>
 
-        <Menu>
-          <MenuTrigger
-            render={
-              <button
-                type="button"
-                aria-label="Language"
-                className="flex h-11 items-center gap-2 rounded-full bg-asha-sand px-4 text-base font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-asha-teal"
-              />
-            }
-          >
-            <span className={cn('h-2 w-2 rounded-full', choice === 'auto' ? 'bg-asha-teal' : 'bg-asha-orange')} aria-hidden />
-            {LANG_NAME[lang]}
-            <ChevronDown className="h-4 w-4 text-asha-muted" aria-hidden />
-          </MenuTrigger>
-          <MenuContent align="end" className="w-48 bg-white">
-            {(['auto', 'hi', 'kn', 'en'] as LangChoice[]).map((c) => (
-              <MenuItem key={c} onClick={() => setChoice(c)}>
-                <span>{c === 'auto' ? `Auto · ${LANG_NAME[detected]}` : LANG_NAME[c]}</span>
-                {choice === c && <Check className="ml-auto h-4 w-4 text-asha-teal" aria-hidden />}
-              </MenuItem>
-            ))}
-          </MenuContent>
-        </Menu>
+        <div className="flex items-center gap-4">
+          <span className="hidden text-xl font-extrabold tracking-tight text-asha-teal lg:block">ASHA Saathi</span>
+          <Menu>
+            <MenuTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label="Language"
+                  className="flex h-11 items-center gap-2 rounded-full bg-asha-sand px-4 text-base font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-asha-teal"
+                />
+              }
+            >
+              <span className={cn('h-2 w-2 rounded-full', choice === 'auto' ? 'bg-asha-teal' : 'bg-asha-orange')} aria-hidden />
+              {LANG_NAME[lang]}
+              <ChevronDown className="h-4 w-4 text-asha-muted" aria-hidden />
+            </MenuTrigger>
+            <MenuContent align="end" className="w-48 bg-white">
+              {(['auto', 'hi', 'kn', 'en'] as LangChoice[]).map((c) => (
+                <MenuItem key={c} onClick={() => setChoice(c)}>
+                  <span>{c === 'auto' ? `Auto · ${LANG_NAME[detected]}` : LANG_NAME[c]}</span>
+                  {choice === c && <Check className="ml-auto h-4 w-4 text-asha-teal" aria-hidden />}
+                </MenuItem>
+              ))}
+            </MenuContent>
+          </Menu>
+        </div>
       </header>
 
       {/* Sample stat chips (real numbers arrive with the database) */}
-      <div className="flex gap-2 px-4 pb-2">
+      <div className="flex gap-2 px-4 pb-2 lg:col-span-2 lg:px-0 lg:pb-4">
         <span className="rounded-full border border-asha-line bg-white px-3 py-1 text-sm font-medium">
           {SAMPLE_STATS.visitsToday} visits
         </span>
@@ -125,7 +129,7 @@ export function VoiceScreen({
       </div>
 
       {problem && (
-        <div role="alert" className="mx-4 mb-2 flex items-start gap-3 rounded-2xl border border-asha-red/20 bg-asha-red-soft p-3 text-sm text-asha-red">
+        <div role="alert" className="mx-4 mb-2 flex items-start gap-3 rounded-2xl border border-asha-red/20 bg-asha-red-soft p-3 text-sm text-asha-red lg:col-span-2 lg:mx-0 lg:mb-4">
           <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
           <p className="min-w-0 flex-1 break-words font-medium">{problem.text}</p>
           {problem.onRetry && (
@@ -136,8 +140,12 @@ export function VoiceScreen({
         </div>
       )}
 
-      {/* Conversation */}
-      <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-2" aria-label="Conversation">
+      {/* Conversation: a card on desktop, the full scroll area on phone */}
+      <div
+        ref={scrollRef}
+        className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-2 lg:col-start-1 lg:row-start-4 lg:flex-none lg:rounded-3xl lg:border lg:border-asha-line lg:bg-white/60 lg:p-5"
+        aria-label="Conversation"
+      >
         {messages.length === 0 ? (
           <p className="m-auto max-w-[16rem] text-center text-base text-asha-muted">{t.empty}</p>
         ) : (
@@ -163,8 +171,8 @@ export function VoiceScreen({
         )}
       </div>
 
-      {/* Orb + controls */}
-      <div className="flex shrink-0 flex-col items-center gap-4 px-4 pb-6 pt-4">
+      {/* Orb + controls: bottom dock on phone, centred main stage on desktop */}
+      <div className="flex shrink-0 flex-col items-center gap-4 px-4 pb-6 pt-4 lg:col-start-2 lg:row-start-4 lg:justify-center lg:gap-8 lg:pb-0">
         <Orb
           state={orbState}
           label={ORB_LABEL[lang][orbState]}
@@ -184,6 +192,13 @@ export function VoiceScreen({
           </Button>
           {micSelector}
         </div>
+        <p className="hidden max-w-sm text-center text-sm text-asha-muted lg:block">
+          {lang === 'kn'
+            ? 'ಹೇಳಿ: “ಸುನೀತಾ ಅವರ ಮನೆಗೆ ಹೋಗಿದ್ದೆ, BP 150 by 100”'
+            : lang === 'en'
+              ? 'Try: “I visited Sunita ji, BP 150 by 100, swelling in the feet”'
+              : 'बोलकर देखिए: “सुनीता जी के घर गई थी, BP 150 by 100, पैरों में सूजन”'}
+        </p>
       </div>
     </div>
   );
