@@ -23,6 +23,9 @@ export async function POST(request: Request) {
   } catch (e) {
     if (e instanceof NoTemplateError) return NextResponse.json({ error: 'NOT_SEEDED', message: e.message }, { status: 503 });
     console.error('[auth/demo]', e);
-    return NextResponse.json({ error: 'SIGN_IN_FAILED' }, { status: 500 });
+    const message = e instanceof Error ? e.message : 'unknown error';
+    // Configuration problems are safe to show (they name a variable, never a value) and save a trip to the server log.
+    const config = /must be set|DATABASE_URL|relation .* does not exist|column .* does not exist/i.test(message);
+    return NextResponse.json({ error: config ? 'SETUP_PROBLEM' : 'SIGN_IN_FAILED', message: config ? message : undefined }, { status: 500 });
   }
 }

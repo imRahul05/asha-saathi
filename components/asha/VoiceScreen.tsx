@@ -1,15 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Check, ChevronDown, PhoneOff, RefreshCw, TriangleAlert } from 'lucide-react';
-import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
+import { PhoneOff, RefreshCw, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Orb } from './Orb';
 import { RiskResult } from './RiskResult';
 import { AlertSent } from './AlertSent';
 import { cn } from '@/lib/utils';
 import type { Snapshot } from '@/lib/snapshot-types';
-import { LANG_NAME, ORB_LABEL, UI_TEXT, detectLang, type Lang, type LangChoice, type OrbState } from '@/lib/asha/lang';
+import { ORB_LABEL, UI_TEXT, detectLang, type Lang, type OrbState } from '@/lib/asha/lang';
+import { LANGUAGES, isLangCode, uiLabelSet } from '@/lib/languages';
 
 export type TranscriptMessage = {
   turn_id?: string | number;
@@ -31,15 +31,16 @@ type VoiceScreenProps = {
   /** Live data for this call from /api/session/state. Null until the first response. */
   snapshot?: Snapshot | null;
   snapshotError?: string | null;
+  /** Language the call was started in (fixed for the call) */
+  callLanguage?: string;
 };
 
 const initials = (name: string) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
 
 export function VoiceScreen({
-  orbState, messageList, currentInProgressMessage, agentUID, onToggleMic, onEnd, micSelector, problem, snapshot = null, snapshotError = null,
+  orbState, messageList, currentInProgressMessage, agentUID, onToggleMic, onEnd, micSelector, problem, snapshot = null, snapshotError = null, callLanguage = 'hi',
 }: VoiceScreenProps) {
-  const [choice, setChoice] = useState<LangChoice>('auto');
   const [tab, setTab] = useState<'talk' | 'result'>('talk');
   const scrollRef = useRef<HTMLDivElement>(null);
   const seenVisit = useRef<string | null>(null);
@@ -58,7 +59,9 @@ export function VoiceScreen({
     return 'hi';
   }, [messages]);
 
-  const lang: Lang = choice === 'auto' ? detected : choice;
+  // The call language is fixed (chosen on the start screen). Only in Auto mode do the labels follow what was last spoken.
+  const call = isLangCode(callLanguage) ? LANGUAGES[callLanguage] : LANGUAGES.hi;
+  const lang: Lang = call.code === 'auto' ? detected : uiLabelSet(call.code);
   const t = UI_TEXT[lang];
 
   useEffect(() => {
@@ -96,29 +99,13 @@ export function VoiceScreen({
 
         <div className="flex items-center gap-4">
           <span className="hidden text-xl font-extrabold tracking-tight text-asha-teal lg:block">ASHA Saathi</span>
-          <Menu>
-            <MenuTrigger
-              render={
-                <button
-                  type="button"
-                  aria-label="Language"
-                  className="flex h-11 items-center gap-2 rounded-full bg-asha-sand px-4 text-base font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-asha-teal"
-                />
-              }
-            >
-              <span className={cn('h-2 w-2 rounded-full', choice === 'auto' ? 'bg-asha-teal' : 'bg-asha-orange')} aria-hidden />
-              {LANG_NAME[lang]}
-              <ChevronDown className="h-4 w-4 text-asha-muted" aria-hidden />
-            </MenuTrigger>
-            <MenuContent align="end" className="w-48 bg-white">
-              {(['auto', 'hi', 'kn', 'en'] as LangChoice[]).map((c) => (
-                <MenuItem key={c} onClick={() => setChoice(c)}>
-                  <span>{c === 'auto' ? `Auto · ${LANG_NAME[detected]}` : LANG_NAME[c]}</span>
-                  {choice === c && <Check className="ml-auto h-4 w-4 text-asha-teal" aria-hidden />}
-                </MenuItem>
-              ))}
-            </MenuContent>
-          </Menu>
+          <span
+            className="flex h-11 items-center gap-2 rounded-full bg-asha-sand px-4 text-base font-bold"
+            aria-label={`Call language: ${call.name}`}
+          >
+            <span className="h-2 w-2 rounded-full bg-asha-teal" aria-hidden />
+            {call.native}
+          </span>
         </div>
       </header>
 

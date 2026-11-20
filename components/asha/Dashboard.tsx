@@ -18,7 +18,7 @@ export function Dashboard() {
     setReady(true);
   }, []);
   const url = ready ? `/api/dashboard${key ? `?key=${encodeURIComponent(key)}` : ''}` : null;
-  const { snapshot, error } = useSnapshot(url, 1500);
+  const { snapshot, error } = useSnapshot(url);
 
   return (
     <div className="min-h-dvh bg-asha-cream px-4 py-5 text-asha-ink sm:px-8 sm:py-8">

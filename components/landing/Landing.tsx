@@ -42,7 +42,7 @@ export function Landing() {
               English. It records the visit, checks for danger signs, and tells the doctor when a mother needs help.
             </p>
             <div className="hero-rise mt-9 flex flex-wrap items-center gap-4" style={rise(3)}>
-              <Link href="/app" className={CTA}>
+              <Link href="/app" prefetch={false} className={CTA}>
                 Try it now
               </Link>
               <a
@@ -170,6 +170,7 @@ export function Landing() {
           <Reveal delay={150} from="scale">
             <Link
               href="/app"
+              prefetch={false}
               className="inline-flex h-14 shrink-0 items-center justify-center rounded-full bg-asha-night px-8 text-lg font-bold text-white transition-colors hover:bg-asha-night-soft focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-asha-night/40"
             >
               Try it now

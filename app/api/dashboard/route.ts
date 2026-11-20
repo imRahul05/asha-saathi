@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { getDb, hasDatabase } from '@/lib/db/client';
 import { getSnapshot } from '@/lib/snapshot';
+import { globalEventsCursor } from '@/lib/db/repo';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,7 +23,11 @@ export async function GET(request: NextRequest) {
   }
   if (!hasDatabase()) return NextResponse.json({ error: 'DATABASE_NOT_CONFIGURED' }, { status: 503 });
   try {
-    return NextResponse.json(await getSnapshot(getDb(), {}), { headers: { 'Cache-Control': 'no-store' } });
+    const db = getDb();
+    const cursor = await globalEventsCursor(db);
+    const since = Number(request.nextUrl.searchParams.get('since') ?? NaN);
+    if (Number.isFinite(since) && since === cursor) return NextResponse.json({ unchanged: true, cursor }, { headers: { 'Cache-Control': 'no-store' } });
+    return NextResponse.json({ ...(await getSnapshot(db, {})), cursor }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (e) {
     console.error('[dashboard]', e);
     return NextResponse.json({ error: 'STATE_UNAVAILABLE' }, { status: 500 });
