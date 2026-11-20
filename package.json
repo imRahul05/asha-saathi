@@ -14,12 +14,17 @@
     "lint": "eslint .",
     "verify:api": "node --import tsx scripts/verify-api-contracts.ts",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:migrate": "node --import tsx scripts/db-migrate.ts",
+    "db:seed": "node --import tsx scripts/db-seed.ts",
+    "verify:mcp": "node --import tsx scripts/verify-mcp.ts",
     "verify": "pnpm run doctor && pnpm run lint && pnpm run typecheck && pnpm run verify:api && pnpm run build"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.39",
     "@base-ui/react": "^1.9.0",
     "@modelcontextprotocol/server": "^2.4.0",
+    "@neondatabase/serverless": "^1.2.1",
     "agora-agent-client-toolkit": "2.10.0",
     "agora-agent-uikit": "1.1.0",
     "agora-agents": "^2.15.0",
@@ -41,6 +46,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.17",
     "@types/node": "^22.10.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
@@ -50,6 +56,7 @@
     "tailwindcss": "^3.4.17",
     "tsx": "^4.20.6",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.58.1"
+    "typescript-eslint": "^8.58.1",
+    "vitest": "^5.1.1"
   }
 }
