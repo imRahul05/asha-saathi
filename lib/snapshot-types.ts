@@ -27,4 +27,6 @@ export type Snapshot = {
   events: SnapshotEvent[];
   remaining: SnapshotRemaining[];
   serverTime: string;
+  /** Highest event id seen. Send it back as ?since= to get a tiny "unchanged" answer when nothing happened. */
+  cursor: number;
 };

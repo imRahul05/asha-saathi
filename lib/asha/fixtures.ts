@@ -29,4 +29,5 @@ export const DEV_SNAPSHOT: Snapshot = {
     { name: 'Pooja K', village: 'Malur', status: 'Pending' },
   ],
   serverTime: new Date().toISOString(),
+  cursor: 4,
 };

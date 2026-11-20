@@ -5,15 +5,19 @@ import { useRouter } from 'next/navigation';
 import { BrandMark } from '@/components/BrandMark';
 import { Orb } from './Orb';
 import { UI_TEXT } from '@/lib/asha/lang';
+import { LANGUAGES, LANGUAGE_ORDER, type LangCode } from '@/lib/languages';
+import { cn } from '@/lib/utils';
 
 type StartScreenProps = {
   isLoading: boolean;
   error: string | null;
   onStart: () => void;
+  language: LangCode;
+  onLanguageChange: (code: LangCode) => void;
 };
 
 // Pre-call screen: one big tap target. Hindi first; the live screen follows the spoken language.
-export function StartScreen({ isLoading, error, onStart }: StartScreenProps) {
+export function StartScreen({ isLoading, error, onStart, language, onLanguageChange }: StartScreenProps) {
   const t = UI_TEXT.hi;
   const router = useRouter();
   async function signOut() {
@@ -38,6 +42,33 @@ export function StartScreen({ isLoading, error, onStart }: StartScreenProps) {
         <p className="max-w-[18rem] text-base text-asha-muted lg:max-w-lg lg:text-lg">
           बोलकर visit दर्ज करें। हिंदी, ಕನ್ನಡ या English, जिसमें आप सहज हों।
         </p>
+      </div>
+
+      <div className="w-full max-w-sm">
+        <p className="mb-2 text-sm font-semibold text-asha-muted">Call language</p>
+        <div className="flex flex-wrap justify-center gap-2" role="radiogroup" aria-label="Call language">
+          {LANGUAGE_ORDER.map((c) => (
+            <button
+              key={c}
+              type="button"
+              role="radio"
+              aria-checked={language === c}
+              disabled={isLoading}
+              onClick={() => onLanguageChange(c)}
+              className={cn(
+                'h-10 rounded-full border px-4 text-base font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-asha-teal disabled:opacity-60',
+                language === c ? 'border-asha-teal bg-asha-teal text-white' : 'border-asha-line bg-white text-asha-ink hover:bg-asha-sand',
+              )}
+            >
+              {LANGUAGES[c].native}
+            </button>
+          ))}
+        </div>
+        {(LANGUAGES[language].standIn || language === 'auto') && (
+          <p className="mt-2 text-xs text-asha-muted">
+            {language === 'auto' ? 'Auto-detect is experimental and often mis-hears accented speech.' : 'Beta: this language is less tested.'}
+          </p>
+        )}
       </div>
 
       <Orb

@@ -277,6 +277,21 @@ export async function listEvents(db: Db, opts: { sessionId?: string | null; asha
   return rows.map(toEvent);
 }
 
+/** Highest event id for a call (or ASHA). Every state change goes through a tool call that logs an event, so this is a cheap "has anything changed?" check. */
+export async function eventsCursor(db: Db, opts: { sessionId?: string | null; ashaId: string }): Promise<number> {
+  const rows = await db.query<{ c: string | number }>(
+    'select coalesce(max(id), 0) as c from events where asha_id = $1 and ($2::text is null or session_id = $2)',
+    [opts.ashaId, opts.sessionId ?? null],
+  );
+  return Number(rows[0]?.c ?? 0);
+}
+
+/** Highest event id across everything: the projector dashboard's "has anything happened anywhere?" check. */
+export async function globalEventsCursor(db: Db): Promise<number> {
+  const rows = await db.query<{ c: string | number }>('select coalesce(max(id), 0) as c from events');
+  return Number(rows[0]?.c ?? 0);
+}
+
 /** The visit most recently recorded in a call (or, with no session, the ASHA's most recent visit). */
 export async function latestVisit(db: Db, opts: { sessionId?: string | null; ashaId?: string | null }): Promise<Visit | null> {
   const rows = opts.sessionId

@@ -10,6 +10,8 @@ export interface AgoraTokenData {
 export interface ClientStartRequest {
   requester_id: string;
   channel_name: string;
+  /** Call language code, see lib/languages.ts */
+  language?: string;
 }
 
 export interface StopConversationRequest {
@@ -32,4 +34,6 @@ export interface ConversationComponentProps {
   rtmClient: RTMClient;
   onTokenWillExpire: (uid: string) => Promise<AgoraRenewalTokens>;
   onEndConversation: () => void;
+  /** The language this call was started in */
+  callLanguage?: string;
 }

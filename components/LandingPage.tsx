@@ -12,6 +12,7 @@ import type {
 import { ErrorBoundary } from './ErrorBoundary';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { StartScreen } from './asha/StartScreen';
+import { DEFAULT_LANGUAGE, isLangCode, type LangCode } from '@/lib/languages';
 
 // Dynamically import the ConversationComponent with ssr disabled
 const ConversationComponent = dynamic(() => import('./ConversationComponent'), {
@@ -68,11 +69,31 @@ export default function LandingPage() {
   const [rtmClient, setRtmClient] = useState<RTMClient | null>(null);
   // Real reason the agent could not start (HTTP status + body), shown on screen instead of a vague banner.
   const [agentJoinError, setAgentJoinError] = useState<string | null>(null);
+  // Call language: remembered per browser. Fixed for the duration of a call.
+  const [language, setLanguage] = useState<LangCode>(DEFAULT_LANGUAGE);
+  const [callLanguage, setCallLanguage] = useState<LangCode>(DEFAULT_LANGUAGE);
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem('asha_language');
+      if (isLangCode(saved)) setLanguage(saved);
+    } catch {
+      /* storage unavailable: keep the default */
+    }
+  }, []);
+  const chooseLanguage = (code: LangCode) => {
+    setLanguage(code);
+    try {
+      window.localStorage.setItem('asha_language', code);
+    } catch {
+      /* ignore */
+    }
+  };
 
   const handleStartConversation = async () => {
     setIsLoading(true);
     setError(null);
     setAgentJoinError(null);
+    setCallLanguage(language);
 
     try {
       // 1. Fetch RTC token + channel
@@ -103,6 +124,7 @@ export default function LandingPage() {
           body: JSON.stringify({
             requester_id: responseData.uid,
             channel_name: responseData.channel,
+            language,
           } as ClientStartRequest),
         })
           .then(async (res) => {
@@ -225,7 +247,7 @@ export default function LandingPage() {
   return (
     <div className="relative h-dvh overflow-hidden bg-asha-cream text-asha-ink">
       {!showConversation ? (
-        <StartScreen isLoading={isLoading} error={error} onStart={handleStartConversation} />
+        <StartScreen isLoading={isLoading} error={error} onStart={handleStartConversation} language={language} onLanguageChange={chooseLanguage} />
       ) : agoraData && rtmClient ? (
         <>
           {/* Non-fatal: the call screen still renders, but say exactly why the agent is missing. */}
@@ -246,6 +268,7 @@ export default function LandingPage() {
                   rtmClient={rtmClient}
                   onTokenWillExpire={handleTokenWillExpire}
                   onEndConversation={handleEndConversation}
+                  callLanguage={callLanguage}
                 />
               </AgoraProvider>
             </ErrorBoundary>

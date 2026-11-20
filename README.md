@@ -60,13 +60,22 @@ Rule thresholds come from the official documents we hold. See `knowledge/RULES_E
 - `/dashboard` shows real patient data. **Set `DASHBOARD_KEY` in production** and open `/dashboard?key=...`.
 - Use made-up data in demos. Do not seed real patients without proper consent and access control.
 
+## Languages
+
+Pick the call language on the start screen: Hindi, English, Kannada, Tamil, Telugu, Gujarati, Bengali, Marathi or Malayalam. The speech recogniser is set per call (Deepgram nova-3 with that language's code) and the agent speaks the same language with the Murf voice. **Why not automatic detection:** Deepgram's multi mode mis-heard accented English as Telugu and Urdu, so "Auto (beta)" is kept only as an experiment.
+
+- **Tested with real calls (synthetic speech):** English, Tamil, Gujarati, Malayalam, plus Hindi and Kannada earlier. Telugu, Bengali and Marathi are configured but not yet tested.
+- **Bhojpuri** is not supported by Agora, Deepgram or Murf. Hindi is the closest choice.
+- Marathi and Malayalam are not in our SDK's accepted interaction-language list, so they use a stand-in tag for Agora's turn handling; recognition itself uses the right Deepgram code. Malayalam recognised speech correctly in testing.
+- Greetings and the per-language word lists in `lib/languages.ts` were written by a machine and need a native speaker's review. Non-Hindi/English results are less reliable: the model once read 150 as 190 in Malayalam before the glossary was added, so the agent reads numbers back and the ASHA must listen.
+
 ## Run it
 
 Requirements: Node 22+, pnpm, an Agora project, a Murf API key, a Neon database.
 
 ```bash
 pnpm install
-cp env.local.example .env.local       # fill in the values (see the comments in that file)
+pnpm setup:local                      # checks your .env / .env.local, creates missing secrets, lists what is missing
 pnpm db:migrate                       # create the tables (safe to repeat)
 pnpm db:seed                          # one ASHA and six registered mothers (set SEED_DOCTOR_PHONE first)
 pnpm dev                              # http://localhost:3000  (landing)  /app  (the voice app)

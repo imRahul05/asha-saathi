@@ -90,6 +90,7 @@ export default function ConversationComponent({
   rtmClient,
   onTokenWillExpire,
   onEndConversation,
+  callLanguage,
 }: ConversationComponentProps) {
   const client = useRTCClient();
   const remoteUsers = useRemoteUsers();
@@ -518,6 +519,7 @@ export default function ConversationComponent({
         problem={problem}
         snapshot={snapshot}
         snapshotError={snapshotError}
+        callLanguage={callLanguage}
       />
       {/* RemoteUser plays the agent's audio. It must stay mounted, but it is invisible. */}
       {remoteUsers.map((user) => (

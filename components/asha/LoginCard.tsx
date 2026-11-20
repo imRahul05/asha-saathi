@@ -9,7 +9,8 @@ import { BrandMark } from '@/components/BrandMark';
 const REASONS: Record<string, string> = {
   RATE_LIMITED: 'Too many sign-ins from this network. Please try again in a few minutes.',
   NOT_SEEDED: 'The demo is not set up yet. An admin needs to run the database seed.',
-  DATABASE_NOT_CONFIGURED: 'The database is not connected yet, so the demo cannot start.',
+  DATABASE_NOT_CONFIGURED: 'The database is not connected yet, so the demo cannot start. Set DATABASE_URL (see README).',
+  SETUP_PROBLEM: 'The server is not set up correctly. Run `pnpm setup:local` and `pnpm db:migrate`.',
 };
 
 // One-click demo sign-in. The server creates a private demo ASHA for this visitor and sets a signed cookie.

@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/client';
-import { alertsForVisit, firstAsha, getAsha, latestVisit, listEvents, mostRecentlyActiveAshaId, todayCounts, type EventRow, type Visit } from '@/lib/db/repo';
+import { alertsForVisit, eventsCursor, firstAsha, getAsha, latestVisit, listEvents, mostRecentlyActiveAshaId, todayCounts, type EventRow, type Visit } from '@/lib/db/repo';
 import type { Snapshot, SnapshotEvent, SnapshotRemaining, SnapshotVisit } from '@/lib/snapshot-types';
 
 type Row = Record<string, unknown>;
@@ -81,12 +81,13 @@ export async function getSnapshot(db: Db, opts: { sessionId?: string | null; ash
   const targetId = opts.ashaId ?? (opts.sessionId ? null : await mostRecentlyActiveAshaId(db));
   const asha = (targetId ? await getAsha(db, targetId) : null) ?? (opts.ashaId ? null : await firstAsha(db));
   if (!asha) {
-    return { asha: null, counts: { visits: 0, highRisk: 0, alertsSent: 0, followUps: 0 }, visit: null, events: [], remaining: [], serverTime: new Date().toISOString() };
+    return { asha: null, counts: { visits: 0, highRisk: 0, alertsSent: 0, followUps: 0 }, visit: null, events: [], remaining: [], serverTime: new Date().toISOString(), cursor: 0 };
   }
   const visit = await latestVisit(db, { sessionId: opts.sessionId ?? null, ashaId: asha.id });
   let events = await listEvents(db, { sessionId: opts.sessionId ?? null, ashaId: asha.id, limit: 200 });
   events = events.slice(-12);
-  const [counts, remaining, snapVisit] = await Promise.all([
+  const [cursor, counts, remaining, snapVisit] = await Promise.all([
+    eventsCursor(db, { sessionId: opts.sessionId ?? null, ashaId: asha.id }),
     todayCounts(db, asha.id),
     remainingToday(db, asha.id),
     visit ? toSnapshotVisit(db, visit, { doctor: asha.doctorName, phc: asha.phcName }) : Promise.resolve(null),
@@ -99,5 +100,6 @@ export async function getSnapshot(db: Db, opts: { sessionId?: string | null; ash
     events: events.map(toEvent),
     remaining,
     serverTime: new Date().toISOString(),
+    cursor,
   };
 }

@@ -7,10 +7,19 @@ export const SESSION_TTL_SECONDS = 8 * 60 * 60;
 
 export type Session = { ashaId: string; mode: 'demo' | 'user'; exp: number };
 
+let warnedDevSecret = false;
 function secret(): string {
-  const k = process.env.SESSION_SECRET ?? process.env.MCP_SHARED_SECRET;
-  if (!k) throw new Error('SESSION_SECRET (or MCP_SHARED_SECRET) must be set to sign sessions');
-  return k;
+  const k = process.env.SESSION_SECRET || process.env.MCP_SHARED_SECRET; // empty strings count as unset
+  if (k) return k;
+  // Local development only: never fall back to a known secret in production.
+  if (process.env.NODE_ENV !== 'production') {
+    if (!warnedDevSecret) {
+      warnedDevSecret = true;
+      console.warn('[auth] SESSION_SECRET is not set: using an insecure development secret. Run `pnpm setup:local` to generate real ones.');
+    }
+    return 'dev-only-insecure-session-secret';
+  }
+  throw new Error('SESSION_SECRET (or MCP_SHARED_SECRET) must be set to sign sessions');
 }
 
 const mac = (body: string) => createHmac('sha256', secret()).update(`session.${body}`).digest('base64url');

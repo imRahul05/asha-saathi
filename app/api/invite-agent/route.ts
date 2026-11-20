@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { Agent, AgoraClient, Area, DeepgramSTT, ExpiresIn, MiniMaxTTS, MurfTTS, OpenAI } from 'agora-agents';
 import type { AgentResponse } from '@/types/conversation';
 import { DEFAULT_AGENT_UID } from '@/lib/agora';
-import { buildSystemPrompt, FAILURE_MESSAGE, GREETING } from '@/lib/prompt';
+import { buildSystemPrompt } from '@/lib/prompt';
+import { DEFAULT_LANGUAGE, LANGUAGES, LANGUAGE_ORDER } from '@/lib/languages';
 import { TOOL_NAMES } from '@/lib/tools';
 import { getDb, hasDatabase } from '@/lib/db/client';
 import { getAsha } from '@/lib/db/repo';
@@ -19,6 +20,7 @@ const MANAGED_LLMS = ['gpt-4o-mini', 'gpt-4.1-mini', 'gpt-5-nano', 'gpt-5-mini']
 const Body = z.object({
   requester_id: z.string().min(1).max(40),
   channel_name: z.string().min(1).max(120),
+  language: z.enum(LANGUAGE_ORDER as [string, ...string[]]).default(DEFAULT_LANGUAGE),
 });
 
 function requireEnv(name: string): string {
@@ -36,6 +38,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'requester_id and channel_name are required' }, { status: 400 });
     }
     const { requester_id, channel_name } = parsed.data;
+    const lang = LANGUAGES[parsed.data.language as keyof typeof LANGUAGES];
 
     // The calling ASHA comes from the signed session, never from the request body, so tools only ever act on her mothers.
     if (!hasDatabase()) return NextResponse.json({ error: 'DATABASE_NOT_CONFIGURED' }, { status: 503 });
@@ -54,7 +57,6 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.PUBLIC_BASE_URL ?? `https://${request.headers.get('host')}`;
     const llmModel: (typeof MANAGED_LLMS)[number] =
       MANAGED_LLMS.find((m) => m === process.env.LLM_MODEL) ?? 'gpt-4o-mini';
-    const languages = (process.env.ASR_LANGUAGES ?? 'hi-IN,kn-IN,en-IN').split(',').map((s) => s.trim()).filter(Boolean);
     const murfKey = process.env.MURF_API_KEY;
     const murfVoice = process.env.MURF_VOICE_ID;
     const useMurf = Boolean(murfKey && murfVoice);
@@ -68,13 +70,13 @@ export async function POST(request: NextRequest) {
 
     const agent = new Agent({
       client,
-      instructions: buildSystemPrompt({ ashaName }),
-      greeting: GREETING,
-      failureMessage: FAILURE_MESSAGE,
+      instructions: buildSystemPrompt({ ashaName, language: lang.code }),
+      greeting: lang.greeting,
+      failureMessage: lang.failure,
       maxHistory: 16,
       // Several languages in one session: the speech recogniser follows whichever the ASHA speaks. VAD because semantic end-of-speech is English/Chinese only.
       turnDetection: {
-        language: languages as never,
+        language: lang.agora as never,
         config: { end_of_speech: { mode: 'vad', vad_config: { silence_duration_ms: 640 } } },
       },
       advancedFeatures: { enable_rtm: true },
@@ -82,13 +84,14 @@ export async function POST(request: NextRequest) {
     })
       .withTools(true) // advanced_features.enable_tools: required for mcp_servers
       // Managed speech recognition: no apiKey, so the SDK picks the Agora preset deepgram_nova_3.
-      .withStt(new DeepgramSTT({ model: 'nova-3', language: 'multi' }))
+      // The recogniser language is fixed per call (chosen on the start screen): Deepgram's multi mode mis-hears accented English as Telugu or Urdu.
+      .withStt(new DeepgramSTT({ model: 'nova-3', language: lang.deepgram }))
       // Managed LLM: no apiKey and no url, so the SDK picks the Agora preset for this model.
       .withLlm(
         new OpenAI({
           model: llmModel,
-          greetingMessage: GREETING,
-          failureMessage: FAILURE_MESSAGE,
+          greetingMessage: lang.greeting,
+          failureMessage: lang.failure,
           maxHistory: 16,
           mcpServers: [
             {
@@ -111,7 +114,7 @@ export async function POST(request: NextRequest) {
           ? new MurfTTS({
               key: murfKey!,
               voiceId: murfVoice!,
-              locale: 'hi-IN',
+              locale: lang.murf,
               model: 'falcon-2.1',
               sampleRate: 24000,
               baseUrl: process.env.MURF_WS_URL ?? 'wss://global.api.murf.ai/v1/speech/stream-input',

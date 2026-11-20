@@ -34,6 +34,7 @@ export function StickyHeader() {
           </Link>
           <Link
             href="/app"
+            prefetch={false}
             className={cn(
               'rounded-full px-5 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white',
               stuck ? 'bg-asha-orange text-asha-night hover:bg-[#E8863C]' : 'border border-white/25 hover:bg-white/10',
