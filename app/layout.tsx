@@ -1,23 +1,17 @@
 import type { Metadata, Viewport } from 'next';
-import { Bricolage_Grotesque, Inter, Noto_Sans_Devanagari, Noto_Sans_Kannada } from 'next/font/google';
 import './globals.css';
-
-// One font stack for three scripts. Browsers fall back per glyph: Latin -> Devanagari -> Kannada.
-const latin = Inter({ subsets: ['latin'], variable: '--font-latin', display: 'swap' });
-// Display face for headings on the landing page (Latin only; Indic glyphs fall back to the Noto faces).
-const display = Bricolage_Grotesque({ subsets: ['latin'], variable: '--font-display', display: 'swap' });
-const deva = Noto_Sans_Devanagari({
-  subsets: ['devanagari', 'latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-deva',
-  display: 'swap',
-});
-const knda = Noto_Sans_Kannada({
-  subsets: ['kannada', 'latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-knda',
-  display: 'swap',
-});
+// Self-hosted fonts (npm packages, bundled at build time). Next's Google-font loader downloads fonts while building, so one network
+// hiccup could fail a whole deploy. Each package serves per-script files, so a phone only downloads the scripts it actually shows.
+import '@fontsource-variable/inter';
+import '@fontsource-variable/bricolage-grotesque';
+import '@fontsource/noto-sans-devanagari/400.css';
+import '@fontsource/noto-sans-devanagari/500.css';
+import '@fontsource/noto-sans-devanagari/600.css';
+import '@fontsource/noto-sans-devanagari/700.css';
+import '@fontsource/noto-sans-kannada/400.css';
+import '@fontsource/noto-sans-kannada/500.css';
+import '@fontsource/noto-sans-kannada/600.css';
+import '@fontsource/noto-sans-kannada/700.css';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -39,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="hi" className={`h-full ${latin.variable} ${display.variable} ${deva.variable} ${knda.variable}`}>
+    <html lang="hi" className="h-full">
       <body className="h-full min-h-screen bg-asha-cream font-asha text-asha-ink antialiased">
         {children}
       </body>

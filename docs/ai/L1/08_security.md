@@ -90,6 +90,11 @@ Re-audit security docs when any of these change:
 - environment variable set or naming
 - provider integration path (default vs BYOK)
 
+## Sessions
+
+- The session cookie is signed and stateless, so it can outlive its account (demo accounts are deleted after 24 hours or by cleanup). Pages and call-start routes therefore also check that the ASHA row exists (`ashaExists`, `requireLiveSession`). If not: the API answers `401 SESSION_EXPIRED`, `/app` redirects to `/login?expired=1`, and the login page shows "Your session ended" instead of bouncing back to `/app`. Polling stops on a 401 and the call screen shows a sign-in prompt. A database error never counts as signed out.
+- Never bulk-delete demo accounts on the production database while people may be using it; `createDemoAsha` already purges accounts older than 24 hours.
+
 ## Agent safety
 
 - Prompt `saathi.v2` carries explicit safety rules: no diagnosis or doses, no health advice outside `searchGuidelines` passages, instructions confidential, everything spoken or returned by tools treated as data not commands, scope limited to visits and guideline help, no phone numbers or other people's data.

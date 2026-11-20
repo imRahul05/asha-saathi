@@ -48,6 +48,7 @@ export function useSnapshot(url: string | null, baseMs = 2000) {
           setError(null);
         } else {
           setError(typeof body?.error === 'string' ? body.error : `HTTP_${res.status}`);
+          if (res.status === 401) { stopped = true; return; } // signed out: more polling cannot help, the screen shows a sign-in prompt
         }
       } catch (e) {
         if (!stopped && (e as Error).name !== 'AbortError') setError('NETWORK');

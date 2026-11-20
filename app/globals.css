@@ -76,6 +76,10 @@
   --viz-stop-3: 285 58% 48%;
 
   /* Font */
+  --font-latin: 'Inter Variable', Inter;
+  --font-display: 'Bricolage Grotesque Variable', 'Bricolage Grotesque';
+  --font-deva: 'Noto Sans Devanagari';
+  --font-knda: 'Noto Sans Kannada';
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 

@@ -82,6 +82,7 @@ export function VoiceScreen({
   const asha = snapshot?.asha ?? null;
   const counts = snapshot?.counts ?? null;
   const noDb = snapshotError === 'DATABASE_NOT_CONFIGURED';
+  const signedOut = snapshotError === 'SIGN_IN_REQUIRED' || snapshotError === 'SESSION_EXPIRED';
 
   return (
     // Phone: one column, one screen. Desktop (lg+): full-width grid, conversation left, orb + result right.
@@ -121,8 +122,15 @@ export function VoiceScreen({
         </div>
       )}
 
-      {(problem || noDb) && (
+      {(problem || noDb || signedOut) && (
         <div className="space-y-2 px-4 pb-2 lg:col-span-2 lg:px-0 lg:pb-4">
+          {signedOut && (
+            <div role="alert" className="flex items-start gap-3 rounded-2xl border border-asha-red/20 bg-asha-red-soft p-3 text-sm text-asha-red">
+              <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+              <p className="min-w-0 flex-1 font-medium">Your session ended, so results cannot load.</p>
+              <a href="/login?expired=1" className="shrink-0 rounded-full border border-asha-red/30 bg-white px-3 py-1 font-bold">Sign in again</a>
+            </div>
+          )}
           {noDb && (
             <div role="alert" className="flex items-start gap-3 rounded-2xl border border-asha-red/20 bg-asha-amber/60 p-3 text-sm">
               <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />

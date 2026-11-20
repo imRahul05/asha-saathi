@@ -100,7 +100,7 @@ export default function LandingPage() {
       // console.log('Fetching Agora token...');
       const agoraResponse = await fetch('/api/generate-agora-token');
       if (agoraResponse.status === 401) {
-        window.location.href = '/login'; // demo session expired or cleared
+        window.location.href = '/login?expired=1'; // demo session expired or cleared
         return;
       }
       const responseData = await agoraResponse.json();
@@ -129,7 +129,7 @@ export default function LandingPage() {
         })
           .then(async (res) => {
             if (res.status === 401) {
-              window.location.href = '/login';
+              window.location.href = '/login?expired=1';
               return null;
             }
             if (res.status === 429) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RtcTokenBuilder, RtcRole } from 'agora-token';
-import { requireSession } from '@/lib/auth/require';
+import { requireLiveSession } from '@/lib/auth/require';
 
 const EXPIRATION_TIME_IN_SECONDS = 3600;
 
@@ -11,7 +11,7 @@ function generateChannelName(): string {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = requireSession(request);
+  const auth = await requireLiveSession(request);
   if (!auth.ok) return auth.response;
   // console.log('Generating Agora token...');
   const APP_ID = process.env.NEXT_PUBLIC_AGORA_APP_ID;
