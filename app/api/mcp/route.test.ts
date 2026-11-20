@@ -52,7 +52,7 @@ describe('/api/mcp', () => {
   it('lists every tool with a JSON schema Agora can read', async () => {
     const r = await rpc('tools/list', {});
     const tools = r.json.result.tools as Array<{ name: string; inputSchema: { type: string; properties?: Record<string, unknown>; required?: string[] } }>;
-    expect(tools.map((t) => t.name).sort()).toEqual(['draftAlert', 'findBeneficiary', 'getBeneficiaryHistory', 'recordVisit', 'scheduleFollowUp', 'sendAlert', 'todaySummary']);
+    expect(tools.map((t) => t.name).sort()).toEqual(['draftAlert', 'findBeneficiary', 'getBeneficiaryHistory', 'recordVisit', 'scheduleFollowUp', 'searchGuidelines', 'sendAlert', 'todaySummary']);
     const rv = tools.find((t) => t.name === 'recordVisit')!;
     expect(rv.inputSchema.type).toBe('object');
     expect(Object.keys(rv.inputSchema.properties ?? {})).toEqual(expect.arrayContaining(['beneficiaryId', 'bpSys', 'bpDia', 'hb', 'symptoms']));

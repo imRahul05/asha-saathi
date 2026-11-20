@@ -45,7 +45,7 @@ afterAll(async () => db.close());
 describe('tool registry', () => {
   it('has unique, camelCase names that match what the agent will be told', () => {
     expect(new Set(TOOL_NAMES).size).toBe(TOOLS.length);
-    expect(TOOL_NAMES).toEqual(['findBeneficiary', 'getBeneficiaryHistory', 'recordVisit', 'scheduleFollowUp', 'todaySummary', 'draftAlert', 'sendAlert']);
+    expect(TOOL_NAMES).toEqual(['findBeneficiary', 'getBeneficiaryHistory', 'recordVisit', 'scheduleFollowUp', 'todaySummary', 'draftAlert', 'sendAlert', 'searchGuidelines']);
   });
 });
 

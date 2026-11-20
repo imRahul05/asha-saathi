@@ -89,6 +89,11 @@ From `types/conversation.ts` (high-use):
 - Connection issue records carry `source`, `agentUserId`, code/message, timestamp.
 - SAL and signaling fallback payloads are parsed defensively because message schema can vary.
 
+## Guideline search
+
+- Tool `searchGuidelines({ query })` (8th MCP tool). `query` is 3 to 200 characters of English keywords. Returns `{ found: true, rules, passages: [{ source, page, text }] }` or `{ found: false, hint }`. Passages come from `kb_chunks` (verbatim official quotes). A passage must match at least two content words of the query, so off-topic questions return nothing.
+- `pnpm kb:verify` (quotes vs official PDFs), `pnpm kb:check` (retrieval questions, embedded Postgres), `pnpm kb:ingest` (idempotent load).
+
 ## Doctor call routes
 
 - `GET /api/call/link?visit=<id>` (session required): returns signed `asha` and `doctor` call URLs for one of the signed-in ASHA's visits.

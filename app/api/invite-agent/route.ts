@@ -90,6 +90,9 @@ export async function POST(request: NextRequest) {
       .withLlm(
         new OpenAI({
           model: llmModel,
+          // Low randomness and short replies: fewer invented details, no long monologues. (gpt-5 models only accept the default temperature.)
+          maxTokens: 220,
+          ...(llmModel.startsWith('gpt-5') ? {} : { temperature: 0.2 }),
           greetingMessage: lang.greeting,
           failureMessage: lang.failure,
           maxHistory: 16,

@@ -18,6 +18,9 @@
     "db:migrate": "node --import tsx scripts/db-migrate.ts",
     "db:seed": "node --import tsx scripts/db-seed.ts",
     "verify:mcp": "node --import tsx scripts/verify-mcp.ts",
+    "kb:ingest": "node --import tsx scripts/kb-ingest.ts",
+    "kb:check": "node --import tsx scripts/kb-check.ts",
+    "kb:verify": "node --import tsx scripts/kb-verify.ts",
     "setup:local": "node --import tsx scripts/setup-local.ts",
     "alerts:test": "node --env-file=.env.local --import tsx scripts/send-test-alert.ts",
     "twilio:test": "node --env-file=.env.local --import tsx scripts/send-test-alert.ts",
@@ -63,6 +66,7 @@
     "tsx": "^4.20.6",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.58.1",
+    "unpdf": "^2.2.1",
     "vitest": "^5.1.1"
   }
 }

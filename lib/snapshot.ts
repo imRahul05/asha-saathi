@@ -16,6 +16,10 @@ export function describeEvent(e: Pick<EventRow, 'name' | 'ok' | 'input' | 'outpu
     case 'sendAlert': return out.alreadySent ? 'already sent' : `sent via ${String(out.provider ?? '')}`;
     case 'scheduleFollowUp': return `+${String(inp.inDays ?? '')} days`;
     case 'todaySummary': return `${Number(out.visits ?? 0)} visits today`;
+    case 'searchGuidelines': {
+      const ps = Array.isArray(out.passages) ? (out.passages as Array<{ source?: string; page?: string }>) : [];
+      return ps.length ? `source: ${ps[0].source ?? ''}, p.${ps[0].page ?? ''}` : 'no guideline found, referred to MO';
+    }
     case 'getBeneficiaryHistory': return `${Array.isArray(out.visits) ? out.visits.length : 0} earlier visits`;
     default: return '';
   }

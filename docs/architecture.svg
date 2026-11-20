@@ -34,7 +34,7 @@
     <rect x="460" y="180" width="340" height="34" rx="9" fill="#fff" stroke="#5EEAD4"/><text x="474" y="202">/api/auth/demo: signed session cookie</text>
     <rect x="460" y="220" width="340" height="34" rx="9" fill="#fff" stroke="#5EEAD4"/><text x="474" y="242">/api/generate-agora-token: RTC + RTM token</text>
     <rect x="460" y="260" width="340" height="34" rx="9" fill="#fff" stroke="#5EEAD4"/><text x="474" y="282">/api/invite-agent: starts the agent, checks it joined</text>
-    <rect x="460" y="300" width="340" height="34" rx="9" fill="#fff" stroke="#5EEAD4"/><text x="474" y="322">/api/mcp: tools the agent calls (7 tools)</text>
+    <rect x="460" y="300" width="340" height="34" rx="9" fill="#fff" stroke="#5EEAD4"/><text x="474" y="322">/api/mcp: 8 tools, incl. searchGuidelines</text>
     <rect x="460" y="340" width="340" height="34" rx="9" fill="#fff" stroke="#5EEAD4"/><text x="474" y="362">/api/session/state: cheap polling for the screen</text>
     <rect x="460" y="380" width="340" height="34" rx="9" fill="#EDE9FE" stroke="#A78BFA"/><text x="474" y="402" fill="#4C1D95">/api/call/link + /api/call/join: doctor call</text>
   </g>
@@ -47,7 +47,7 @@
   <text x="474" y="552" font-size="13" font-weight="700" fill="#134E4A">Also here</text>
   <text x="474" y="572" font-size="12" fill="#115E59">Prompt builder + language table (lib/languages.ts)</text>
   <text x="474" y="590" font-size="12" fill="#115E59">Notifier chain (Telegram, WhatsApp, SMS)</text>
-  <text x="474" y="608" font-size="12" fill="#115E59">Usage guard: limits agent starts per visitor</text>
+  <text x="474" y="608" font-size="12" fill="#115E59">Usage guard; guideline search (official quotes only)</text>
 
   <!-- Agora cloud -->
   <rect x="940" y="110" width="260" height="300" rx="18" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
@@ -66,9 +66,9 @@
   <!-- Neon -->
   <rect x="940" y="552" width="260" height="104" rx="18" fill="#E2E8F0" stroke="#475569" stroke-width="2"/>
   <text x="960" y="584" font-size="17" font-weight="800" fill="#0F172A">Neon Postgres</text>
-  <text x="960" y="606" font-size="12" fill="#334155">ashas, mothers, visits, alerts,</text>
-  <text x="960" y="622" font-size="12" fill="#334155">follow-ups, events (audit trail),</text>
-  <text x="960" y="638" font-size="12" fill="#334155">agent_starts (usage limits)</text>
+  <text x="960" y="606" font-size="12" fill="#334155">mothers, visits, alerts, follow-ups,</text>
+  <text x="960" y="622" font-size="12" fill="#334155">events (audit trail), usage limits,</text>
+  <text x="960" y="638" font-size="12" fill="#0F766E" font-weight="700">kb_chunks: verified guideline quotes</text>
 
   <!-- Alert channels -->
   <rect x="440" y="690" width="760" height="130" rx="18" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>

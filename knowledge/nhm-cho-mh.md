@@ -1,5 +1,6 @@
 ---
 id: nhm-cho-mh
+label: NHM maternal health booklet for CHOs
 title: Maternal Health - Guidance Booklet for Community Health Officers (CHOs), Maternal Health Division, MoHFW, February 2022
 source_url: https://nhm.gov.in/New_Update-2022-23/MH/GUIDELINES-%20MH/CHO_Booklet_%20Maternal_Health-English.pdf
 publisher: NHM / MoHFW
