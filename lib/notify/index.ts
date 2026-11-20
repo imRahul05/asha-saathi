@@ -18,6 +18,15 @@ export const consoleNotifier: Notifier = {
 
 type TwilioChannel = 'whatsapp' | 'sms';
 
+/** Wraps the first line that contains text (skipping an emoji-only banner line) with a bold marker pair. */
+function boldHeadline(text: string, open: string, close: string): string {
+  const lines = text.split('\n');
+  const i = lines.findIndex((l) => /[A-Za-z\u0900-\u097F]/.test(l));
+  if (i >= 0) lines[i] = `${open}${lines[i]}${close}`;
+  return lines.join('\n');
+}
+const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
 /**
  * Twilio through the plain REST API (no SDK). Tries the channels in TWILIO_CHANNELS order (default "whatsapp,sms"):
  * - whatsapp: the sandbox or an approved WhatsApp sender. The doctor must have joined the sandbox (it lapses after 3 days).
@@ -88,7 +97,7 @@ export function twilioNotifier(env: NodeJS.ProcessEnv = process.env): Notifier {
       const failures: string[] = [];
       for (const channel of channels) {
         try {
-          const providerId = await sendVia(channel, to.phone, channel === 'sms' ? (opts?.sms ?? message.slice(0, 110)) : message);
+          const providerId = await sendVia(channel, to.phone, channel === 'sms' ? (opts?.sms ?? message.slice(0, 110)) : boldHeadline(message, '*', '*')); // WhatsApp: *bold*
           return { providerId, channel: `twilio-${channel}` };
         } catch (e) {
           failures.push(`${channel}: ${e instanceof Error ? e.message : String(e)}`);
@@ -115,7 +124,7 @@ export function telegramNotifier(env: NodeJS.ProcessEnv = process.env): Notifier
       const res = await fetch(`${base}/bot${token}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: message, disable_web_page_preview: true }),
+        body: JSON.stringify({ chat_id: chatId, text: boldHeadline(escapeHtml(message), '<b>', '</b>'), parse_mode: 'HTML', disable_web_page_preview: true }),
         signal: AbortSignal.timeout(6000),
       });
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; description?: string; error_code?: number; result?: { message_id?: number } };

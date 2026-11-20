@@ -8,14 +8,23 @@ const SYMPTOM_LABEL: Record<string, string> = {
 
 const HEADLINE: Record<string, string> = {
   urgent: 'URGENT: ANC danger sign',
-  high: 'High risk ANC visit',
-  watch: 'ANC visit: needs a recheck',
-  normal: 'ANC visit: normal',
+  high: 'HIGH RISK: ANC visit',
+  watch: 'WATCH: ANC visit, recheck needed',
+  normal: 'NORMAL: ANC visit',
+};
+
+// Chat apps do not allow coloured text, so severity is shown as a coloured emoji bar above the headline:
+// the more serious, the longer and redder the bar. Red = urgent/high, orange = watch, green = normal.
+const BANNER: Record<string, string> = {
+  urgent: '\u{1F6A8}\u{1F7E5}\u{1F7E5}\u{1F7E5}\u{1F7E5}\u{1F7E5}\u{1F6A8}',
+  high: '\u{1F7E5}\u{1F7E5}\u{1F7E5}\u{1F7E5}\u{1F7E5}',
+  watch: '\u{1F7E7}\u{1F7E7}\u{1F7E7}',
+  normal: '\u{1F7E9}\u{1F7E9}\u{1F7E9}',
 };
 
 /** The WhatsApp text for the doctor. Built from recorded facts by a template, never written by the AI. */
 export function composeAlertMessage(visit: Visit, b: Beneficiary, asha: Asha, now: Date = new Date()): string {
-  const lines: string[] = [HEADLINE[visit.riskLevel] ?? 'ANC visit'];
+  const lines: string[] = [BANNER[visit.riskLevel] ?? '', HEADLINE[visit.riskLevel] ?? 'ANC visit'].filter(Boolean);
   lines.push(`${b.name}${b.village ? `, ${b.village}` : ''}${visit.gestationWeeks ? ` · ${visit.gestationWeeks} weeks` : ''}`);
   const facts: string[] = [];
   if (visit.bpSys != null && visit.bpDia != null) facts.push(`BP ${visit.bpSys}/${visit.bpDia}`);
