@@ -89,6 +89,14 @@ From `types/conversation.ts` (high-use):
 - Connection issue records carry `source`, `agentUserId`, code/message, timestamp.
 - SAL and signaling fallback payloads are parsed defensively because message schema can vary.
 
+## Doctor call routes
+
+- `GET /api/call/link?visit=<id>` (session required): returns signed `asha` and `doctor` call URLs for one of the signed-in ASHA's visits.
+- `POST /api/call/join` body `{ t }` (no session; the signed link is the credential): returns `{ appId, channel, uid, token, role, summary }`. Channel is `call-<visitId>`; UIDs are fixed per role (doctor 7001, asha 7002). `401 LINK_INVALID` for bad or expired links.
+- `/call/[t]` page: audio-only RTC in Communication mode (`mode: 'rtc'`), mute, leave.
+- `POST /api/invite-agent` also takes `language` (one of `lib/languages.ts` codes).
+- `GET /api/session/state?since=<cursor>` and `/api/dashboard?since=` return `{ unchanged: true, cursor }` when nothing changed.
+
 ## Backward Compatibility Guidance
 
 - If route response shape changes, update both client consumers and contract tests in same change.

@@ -24,6 +24,11 @@ function secret(): string {
 
 const mac = (body: string) => createHmac('sha256', secret()).update(`session.${body}`).digest('base64url');
 
+/** HMAC for other signed values (call links). `scope` keeps a signature for one purpose from being valid for another. */
+export function hmacScoped(scope: string, body: string): string {
+  return createHmac('sha256', secret()).update(`${scope}.${body}`).digest('base64url');
+}
+
 export function signSession(s: Session): string {
   const body = Buffer.from(JSON.stringify(s)).toString('base64url');
   return `${body}.${mac(body)}`;

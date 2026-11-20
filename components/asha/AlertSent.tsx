@@ -1,6 +1,7 @@
 'use client';
 
-import { Check, TriangleAlert } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Phone, TriangleAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SnapshotRemaining, SnapshotVisit } from '@/lib/snapshot-types';
 
@@ -25,6 +26,29 @@ function daysFromToday(isoDate: string): number {
 }
 
 // Alert status, follow-up, and who is left to visit today. Only shown once there is an alert or a follow-up.
+// Opens the voice call page for this visit in a new tab, so the AI call (and its microphone) can stay as it is.
+function CallDoctorButton({ visitId, doctor }: { visitId: string; doctor: string }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(false);
+  const open = async () => {
+    setBusy(true); setErr(false);
+    try {
+      const r = await fetch(`/api/call/link?visit=${encodeURIComponent(visitId)}`, { cache: 'no-store' });
+      const b = await r.json();
+      if (!r.ok || !b.asha) throw new Error('link');
+      window.open(b.asha, '_blank', 'noopener');
+    } catch { setErr(true); } finally { setBusy(false); }
+  };
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <button type="button" onClick={open} disabled={busy} className="inline-flex h-14 items-center gap-2 rounded-full bg-asha-teal px-6 text-lg font-bold text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-asha-teal/40 disabled:opacity-70">
+        <Phone className="h-5 w-5" aria-hidden /> {doctor} से बात करें
+      </button>
+      {err && <p role="alert" className="text-sm font-semibold text-asha-red">Call link नहीं बना। फिर कोशिश करें।</p>}
+    </div>
+  );
+}
+
 export function AlertSent({ visit, remaining }: Props) {
   const { alert, followUp } = visit;
   const failed = alert?.status === 'failed';
@@ -43,6 +67,8 @@ export function AlertSent({ visit, remaining }: Props) {
               {[alert.doctor, alert.phc].filter(Boolean).join(' · ')} {failed ? 'को नहीं पहुँचा' : draft ? 'को भेजने के लिए आपकी हाँ चाहिए' : `को ${channelLabel(alert.channel)} पर`}
             </p>
           </div>
+
+          {alert.status === 'sent' && <CallDoctorButton visitId={visit.id} doctor={alert.doctor ?? 'Doctor'} />}
 
           <section className="rounded-3xl border border-asha-line bg-white p-4" aria-label="Alert message">
             <div className="mb-3 flex items-center justify-between">

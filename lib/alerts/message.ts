@@ -23,7 +23,7 @@ const BANNER: Record<string, string> = {
 };
 
 /** The WhatsApp text for the doctor. Built from recorded facts by a template, never written by the AI. */
-export function composeAlertMessage(visit: Visit, b: Beneficiary, asha: Asha, now: Date = new Date()): string {
+export function composeAlertMessage(visit: Visit, b: Beneficiary, asha: Asha, now: Date = new Date(), callLink?: string): string {
   const lines: string[] = [BANNER[visit.riskLevel] ?? '', HEADLINE[visit.riskLevel] ?? 'ANC visit'].filter(Boolean);
   lines.push(`${b.name}${b.village ? `, ${b.village}` : ''}${visit.gestationWeeks ? ` · ${visit.gestationWeeks} weeks` : ''}`);
   const facts: string[] = [];
@@ -35,6 +35,8 @@ export function composeAlertMessage(visit: Visit, b: Beneficiary, asha: Asha, no
   const time = new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' }).format(now);
   lines.push(`ASHA: ${asha.name} · ${time}`);
   lines.push('Please review soon.');
+  // Only for serious visits: one tap opens a voice call with the ASHA in the browser.
+  if (callLink && (visit.riskLevel === 'urgent' || visit.riskLevel === 'high')) lines.push('', `Call the ASHA now (browser, no app): ${callLink}`);
   return lines.join('\n');
 }
 

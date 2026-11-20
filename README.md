@@ -60,6 +60,16 @@ Rule thresholds come from the official documents we hold. See `knowledge/RULES_E
 - `/dashboard` shows real patient data. **Set `DASHBOARD_KEY` in production** and open `/dashboard?key=...`.
 - Use made-up data in demos. Do not seed real patients without proper consent and access control.
 
+## Architecture
+
+![ASHA Saathi architecture](docs/architecture.png)
+
+Source: [docs/architecture.svg](docs/architecture.svg).
+
+## Doctor call
+
+For HIGH and URGENT visits the alert message carries a signed link (`/call/<token>`, valid 6 hours). The doctor taps it and joins a browser voice call with the ASHA over Agora RTC: no app, no account, audio only. The page shows the visit summary beside the call. The ASHA opens the same call from the "call doctor" button on the result card. Needs `PUBLIC_BASE_URL` set so the link is absolute.
+
 ## Languages
 
 Pick the call language on the start screen: Hindi, English, Kannada, Tamil, Telugu, Gujarati, Bengali, Marathi or Malayalam. The speech recogniser is set per call (Deepgram nova-3 with that language's code) and the agent speaks the same language with the Murf voice. **Why not automatic detection:** Deepgram's multi mode mis-heard accented English as Telugu and Urdu, so "Auto (beta)" is kept only as an experiment.
