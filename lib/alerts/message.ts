@@ -43,7 +43,6 @@ export function composeSmsText(visit: Visit, b: Beneficiary, asha: Asha, now: Da
   const sym = visit.symptoms.map((x) => (SYMPTOM_LABEL[x] ?? x)).slice(0, 2).join(', ');
   if (sym) parts.push(`${sym}.`);
   parts.push(`ASHA ${asha.name.split(' ')[0]} ${time}. Please review.`);
-  // eslint-disable-next-line no-control-regex
   const ascii = parts.join(' ').replace(/[^\x20-\x7E]/g, '');
   return ascii.length <= 110 ? ascii : `${ascii.slice(0, 107)}...`;
 }
