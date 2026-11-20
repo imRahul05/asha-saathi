@@ -89,6 +89,10 @@ From `types/conversation.ts` (high-use):
 - Connection issue records carry `source`, `agentUserId`, code/message, timestamp.
 - SAL and signaling fallback payloads are parsed defensively because message schema can vary.
 
+## Errors the browser must handle
+
+- `401 SESSION_EXPIRED` (token and agent routes): the signed-in account no longer exists. `401 SIGN_IN_REQUIRED`: no valid cookie. Both send the user to `/login?expired=1`.
+
 ## Guideline search
 
 - Tool `searchGuidelines({ query })` (8th MCP tool). `query` is 3 to 200 characters of English keywords. Returns `{ found: true, rules, passages: [{ source, page, text }] }` or `{ found: false, hint }`. Passages come from `kb_chunks` (verbatim official quotes). A passage must match at least two content words of the query, so off-topic questions return nothing.

@@ -14,7 +14,7 @@ const REASONS: Record<string, string> = {
 };
 
 // One-click demo sign-in. The server creates a private demo ASHA for this visitor and sets a signed cookie.
-export function LoginCard() {
+export function LoginCard({ expired = false }: { expired?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +49,11 @@ export function LoginCard() {
       </div>
 
       <div className="w-full space-y-3">
+        {expired && (
+          <p role="status" className="rounded-2xl bg-asha-amber px-4 py-3 text-sm font-medium text-[#7A4E0A]">
+            Your session ended, so your demo data is gone. Tap below to start a fresh demo.
+          </p>
+        )}
         <button
           type="button"
           onClick={start}

@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     if (!hasDatabase()) return NextResponse.json({ error: 'DATABASE_NOT_CONFIGURED' }, { status: 503 });
     const db = getDb();
     const asha = await getAsha(db, auth.session.ashaId);
-    if (!asha) return NextResponse.json({ error: 'SIGN_IN_REQUIRED' }, { status: 401 });
+    if (!asha) return NextResponse.json({ error: 'SESSION_EXPIRED' }, { status: 401 });
     const ashaId = asha.id;
     const ashaName = asha.name;
 
