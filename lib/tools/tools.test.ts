@@ -135,7 +135,7 @@ describe('alerts: draft, confirm, send once', () => {
     if (!r.ok || r.data.alreadySent) return;
     token = r.data.token;
     expect(sent).toHaveLength(0);
-    expect(r.data.preview).toContain('High risk ANC visit');
+    expect(r.data.preview).toContain('HIGH RISK: ANC visit');
     expect(r.data.preview).toContain('BP 150/100');
     expect(r.data.to.phone).toMatch(/0001$/);
     expect(r.data.to.phone).not.toContain('+9199999');
