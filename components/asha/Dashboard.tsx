@@ -1,6 +1,7 @@
 'use client';
 
-import { Check, HeartPulse, Mic, TriangleAlert } from 'lucide-react';
+import { Check, Mic, TriangleAlert } from 'lucide-react';
+import { BrandMark } from '@/components/BrandMark';
 import { cn } from '@/lib/utils';
 import { SAMPLE_ASHA, SAMPLE_STATS, SAMPLE_VISIT, type VisitResult } from '@/lib/asha/fixtures';
 import type { OrbState } from '@/lib/asha/lang';
@@ -36,9 +37,7 @@ export function Dashboard({
     <div className="min-h-dvh bg-asha-cream px-4 py-5 text-asha-ink sm:px-8 sm:py-8">
       <header className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-asha-teal text-white">
-            <HeartPulse className="h-7 w-7" aria-hidden />
-          </span>
+          <BrandMark className="h-12 w-12" />
           <div>
             <h1 className="font-display text-2xl font-extrabold leading-7">ASHA Saathi</h1>
             <p className="text-sm text-asha-muted">

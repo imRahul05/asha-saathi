@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { HeartPulse } from 'lucide-react';
+import { BrandMark } from '@/components/BrandMark';
 import { Orb } from './Orb';
 import { UI_TEXT } from '@/lib/asha/lang';
 
@@ -20,9 +20,7 @@ export function StartScreen({ isLoading, error, onStart }: StartScreenProps) {
         About ASHA Saathi
       </Link>
       <div className="flex flex-col items-center gap-3">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-asha-teal text-white">
-          <HeartPulse className="h-8 w-8" aria-hidden />
-        </div>
+        <BrandMark className="h-14 w-14" />
         <h1 className="text-3xl font-extrabold tracking-tight lg:text-5xl">ASHA Saathi</h1>
         <p className="max-w-[18rem] text-base text-asha-muted lg:max-w-lg lg:text-lg">
           बोलकर visit दर्ज करें। हिंदी, ಕನ್ನಡ या English, जिसमें आप सहज हों।
