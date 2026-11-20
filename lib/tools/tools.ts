@@ -202,7 +202,7 @@ export const sendAlert = defineTool({
     }
     try {
       const res = await ctx.notifier.send({ name: claimed.toName, phone: claimed.toPhone }, claimed.message, { sms: claimed.smsText ?? undefined });
-      const provider = res.channel && res.channel !== ctx.notifier.name ? `${ctx.notifier.name}-${res.channel}` : ctx.notifier.name; // e.g. twilio-sms
+      const provider = res.channel ?? ctx.notifier.name; // e.g. telegram, twilio-whatsapp, twilio-sms, console
       await markAlertSent(ctx.db, claimed.id, provider, res.providerId);
       return { status: 'sent' as const, alreadySent: false, provider, sentAt: claimed.sentAt };
     } catch (e) {

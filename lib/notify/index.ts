@@ -89,7 +89,7 @@ export function twilioNotifier(env: NodeJS.ProcessEnv = process.env): Notifier {
       for (const channel of channels) {
         try {
           const providerId = await sendVia(channel, to.phone, channel === 'sms' ? (opts?.sms ?? message.slice(0, 110)) : message);
-          return { providerId, channel };
+          return { providerId, channel: `twilio-${channel}` };
         } catch (e) {
           failures.push(`${channel}: ${e instanceof Error ? e.message : String(e)}`);
         }
@@ -99,6 +99,64 @@ export function twilioNotifier(env: NodeJS.ProcessEnv = process.env): Notifier {
   };
 }
 
+/**
+ * Telegram bot message. No join step and no 24-hour window: after the person taps Start in the bot once,
+ * the bot can message them any time. Needs TELEGRAM_BOT_TOKEN and the person's chat id (TELEGRAM_CHAT_ID).
+ * Note: normal bot chats are not end-to-end encrypted.
+ */
+export function telegramNotifier(env: NodeJS.ProcessEnv = process.env): Notifier {
+  const token = env.TELEGRAM_BOT_TOKEN;
+  const chatId = env.TELEGRAM_CHAT_ID;
+  const base = (env.TELEGRAM_API_BASE ?? 'https://api.telegram.org').replace(/\/$/, '');
+  if (!token || !chatId) throw new Error('Telegram needs TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID');
+  return {
+    name: 'telegram',
+    async send(_to, message) {
+      const res = await fetch(`${base}/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: message, disable_web_page_preview: true }),
+        signal: AbortSignal.timeout(6000),
+      });
+      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; description?: string; error_code?: number; result?: { message_id?: number } };
+      if (!res.ok || !json.ok) throw new Error(`error ${json.error_code ?? res.status}: ${json.description ?? 'send failed'}`);
+      return { providerId: json.result?.message_id != null ? String(json.result.message_id) : null, channel: 'telegram' };
+    },
+  };
+}
+
+/** Tries each notifier in order and stops at the first that delivers. If all fail, the error lists every reason. */
+export function chainNotifier(name: string, notifiers: Notifier[]): Notifier {
+  return {
+    name,
+    async send(to, message, opts) {
+      const failures: string[] = [];
+      for (const n of notifiers) {
+        try {
+          const r = await n.send(to, message, opts);
+          return { providerId: r.providerId, channel: r.channel ?? n.name };
+        } catch (e) {
+          failures.push(`${n.name}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      }
+      throw new Error(failures.join(' | '));
+    },
+  };
+}
+
+/**
+ * NOTIFIER=console (default)  logs only
+ * NOTIFIER=twilio             WhatsApp, then SMS
+ * NOTIFIER=multi              Telegram (if configured), then WhatsApp, then SMS
+ */
 export function getNotifier(env: NodeJS.ProcessEnv = process.env): Notifier {
-  return env.NOTIFIER === 'twilio' ? twilioNotifier(env) : consoleNotifier;
+  if (env.NOTIFIER === 'twilio') return twilioNotifier(env);
+  if (env.NOTIFIER === 'multi') {
+    const list: Notifier[] = [];
+    if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID) list.push(telegramNotifier(env));
+    if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) list.push(twilioNotifier(env));
+    if (list.length === 0) throw new Error('NOTIFIER=multi needs Telegram or Twilio credentials');
+    return chainNotifier('alerts', list);
+  }
+  return consoleNotifier;
 }

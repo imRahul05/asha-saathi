@@ -38,9 +38,9 @@ Why it is built this way:
 
 ## Alerts: how delivery works
 
-`NOTIFIER=twilio` tries **WhatsApp first, then SMS** from your Twilio number. Twilio accepts a WhatsApp message and only afterwards reports that the phone has not joined the sandbox (error 63015), so the notifier watches the status for about 3 seconds and falls through to SMS. SMS uses a short ASCII text (`sms_text`), because trial accounts reject long SMS (error 30044). The screen and the dashboard show the channel that actually delivered. Verified on production: spoken yes, one alert, delivered by SMS. WhatsApp works once the doctor's phone sends the sandbox join phrase.
+`NOTIFIER=multi` tries **Telegram first, then WhatsApp, then SMS**. Telegram has no join step and no 24-hour window (create a bot with @BotFather, tap Start in it, run `pnpm telegram:setup`). `NOTIFIER=twilio` skips Telegram. The Twilio part tries WhatsApp first, then SMS from your Twilio number. Twilio accepts a WhatsApp message and only afterwards reports that the phone has not joined the sandbox (error 63015), so the notifier watches the status for about 3 seconds and falls through to SMS. SMS uses a short ASCII text (`sms_text`), because trial accounts reject long SMS (error 30044). The screen and the dashboard show the channel that actually delivered. Verified on production: spoken yes, one alert, delivered by SMS. WhatsApp works once the doctor's phone sends the sandbox join phrase.
 
-`pnpm twilio:test` sends one test message to `SEED_DOCTOR_PHONE`.
+`pnpm alerts:test` sends one real test message through the chain (`--channel telegram|whatsapp|sms` to force one).
 
 ## Evidence and honest limits
 

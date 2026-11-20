@@ -18,7 +18,9 @@
     "db:migrate": "node --import tsx scripts/db-migrate.ts",
     "db:seed": "node --import tsx scripts/db-seed.ts",
     "verify:mcp": "node --import tsx scripts/verify-mcp.ts",
+    "alerts:test": "node --env-file=.env.local --import tsx scripts/send-test-alert.ts",
     "twilio:test": "node --env-file=.env.local --import tsx scripts/send-test-alert.ts",
+    "telegram:setup": "node --env-file=.env.local --import tsx scripts/telegram-setup.ts",
     "verify": "pnpm run doctor && pnpm run lint && pnpm run typecheck && pnpm run verify:api && pnpm run build"
   },
   "dependencies": {

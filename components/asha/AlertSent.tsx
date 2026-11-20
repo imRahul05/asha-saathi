@@ -14,7 +14,8 @@ const STATUS_PILL: Record<SnapshotRemaining['status'], string> = {
 };
 
 // provider is stored like "twilio-sms", "twilio-whatsapp" or "console"
-const channelLabel = (p: string | null) => (p?.endsWith('sms') ? 'SMS' : p?.endsWith('whatsapp') ? 'WhatsApp' : p === 'console' ? 'screen (test mode)' : 'message');
+const channelLabel = (p: string | null) =>
+  p === 'telegram' ? 'Telegram' : p?.endsWith('sms') ? 'SMS' : p?.endsWith('whatsapp') ? 'WhatsApp' : p === 'console' ? 'screen (test mode)' : 'message';
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 function daysFromToday(isoDate: string): number {
