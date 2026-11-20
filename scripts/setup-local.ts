@@ -38,6 +38,15 @@ function ensureSecret(name: string, bytes: number) {
 ensureSecret('MCP_SHARED_SECRET', 24);
 ensureSecret('SESSION_SECRET', 32);
 ensureSecret('DASHBOARD_KEY', 12);
+// Without NOTIFIER the app only LOGS alerts (the screen says "sent" but nothing reaches a phone). If delivery credentials exist, turn delivery on.
+const canDeliver = has('TELEGRAM_BOT_TOKEN') || has('TWILIO_ACCOUNT_SID');
+if (!has('NOTIFIER') && canDeliver) {
+  append.push('NOTIFIER=multi');
+  generated.push('NOTIFIER=multi (alerts go to Telegram, then WhatsApp, then SMS)');
+}
+if (!has('NOTIFIER') && !canDeliver) {
+  console.log('Note: no Telegram or Twilio credentials, so alerts are only logged (test mode). Add them to send real messages.\n');
+}
 if (!has('MURF_VOICE_ID')) {
   append.push('MURF_VOICE_ID=Pooja');
   generated.push('MURF_VOICE_ID (default Pooja)');

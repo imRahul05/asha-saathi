@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, Phone, TriangleAlert } from 'lucide-react';
+import { Check, TriangleAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SnapshotRemaining, SnapshotVisit } from '@/lib/snapshot-types';
 import type { Strings } from '@/lib/i18n';
@@ -29,29 +28,10 @@ function daysFromToday(isoDate: string): number {
   return Math.round((d.getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / 86_400_000);
 }
 
-// Alert status, follow-up, and who is left to visit today. Only shown once there is an alert or a follow-up.
-// Opens the voice call page for this visit in a new tab, so the AI call (and its microphone) can stay as it is.
-function CallDoctorButton({ visitId, doctor, s }: { visitId: string; doctor: string; s: Strings }) {
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState(false);
-  const open = async () => {
-    setBusy(true); setErr(false);
-    try {
-      const r = await fetch(`/api/call/link?visit=${encodeURIComponent(visitId)}`, { cache: 'no-store' });
-      const b = await r.json();
-      if (!r.ok || !b.asha) throw new Error('link');
-      window.open(b.asha, '_blank', 'noopener');
-    } catch { setErr(true); } finally { setBusy(false); }
-  };
-  return (
-    <div className="flex flex-col items-center gap-2">
-      <button type="button" onClick={open} disabled={busy} className="inline-flex h-14 items-center gap-2 rounded-full bg-asha-teal px-6 text-lg font-bold text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-asha-teal/40 disabled:opacity-70">
-        <Phone className="h-5 w-5" aria-hidden /> {s.callDoctor(doctor)}
-      </button>
-      {err && <p role="alert" className="text-sm font-semibold text-asha-red">{s.callFailed}</p>}
-    </div>
-  );
-}
+// Alert details, follow-up, and who is left to visit today. The alert's state and its buttons live in AlertBar, above the result.
+
+/** The doctor's message holds a long signed call link: show it as a short label on screen (the real link is in the message that was sent). */
+const shortLinks = (text: string) => text.replace(/https?:\/\/\S+\/call\/\S+/g, '…/call/…');
 
 export function AlertSent({ visit, remaining, s }: Props) {
   const { alert, followUp } = visit;
@@ -72,8 +52,6 @@ export function AlertSent({ visit, remaining, s }: Props) {
             </p>
           </div>
 
-          {alert.status === 'sent' && <CallDoctorButton visitId={visit.id} doctor={alert.doctor ?? 'Doctor'} s={s} />}
-
           <section className="rounded-3xl border border-asha-line bg-white p-4" aria-label="Alert message">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-bold text-asha-muted">{draft ? s.msgDraft : s.msgSent}</h3>
@@ -81,7 +59,7 @@ export function AlertSent({ visit, remaining, s }: Props) {
                 {failed ? s.alertFailedT : draft ? s.alertDraftT : s.alertSentT}
               </span>
             </div>
-            <p className="whitespace-pre-line rounded-2xl bg-asha-mint px-4 py-3 text-base leading-7">{alert.message}</p>
+            <p className="whitespace-pre-line rounded-2xl bg-asha-mint px-4 py-3 text-base leading-7">{shortLinks(alert.message)}</p>
             <p className="mt-3 text-xs text-asha-muted">
               {failed ? s.hintFailed(alert.error ?? '') : draft ? s.hintDraft : s.hintSent}
             </p>

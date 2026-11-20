@@ -212,6 +212,17 @@ export async function markAlertFailed(db: Db, id: string, error: string): Promis
   return toAlert(rows[0]);
 }
 
+/** The newest alert of this ASHA that is still waiting to be sent (or failed and can be retried), within its time limit. */
+export async function latestOpenAlertForAsha(db: Db, ashaId: string): Promise<Alert | null> {
+  const rows = await db.query<Row>(
+    `select a.* from alerts a join visits v on v.id = a.visit_id
+      where v.asha_id = $1 and a.status in ('draft', 'failed') and a.expires_at > now()
+      order by a.created_at desc limit 1`,
+    [ashaId],
+  );
+  return rows[0] ? toAlert(rows[0]) : null;
+}
+
 export async function alertsForVisit(db: Db, visitId: string): Promise<Alert[]> {
   const rows = await db.query<Row>('select * from alerts where visit_id = $1 order by created_at desc', [visitId]);
   return rows.map(toAlert);
