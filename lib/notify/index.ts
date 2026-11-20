@@ -1,9 +1,10 @@
 // Notifier: how an alert reaches the doctor. Chosen by the NOTIFIER env var; business logic never names a vendor.
 
 export type Recipient = { name: string | null; phone: string | null };
+export type SendResult = { providerId: string | null; /** which channel delivered it, e.g. "whatsapp" or "sms" */ channel?: string };
 export interface Notifier {
   readonly name: string;
-  send(to: Recipient, message: string): Promise<{ providerId: string | null }>;
+  send(to: Recipient, message: string): Promise<SendResult>;
 }
 
 /** Logs instead of sending. The dashboard still shows the alert as sent. Default when no provider is configured. */
@@ -11,30 +12,61 @@ export const consoleNotifier: Notifier = {
   name: 'console',
   async send(to, message) {
     console.log(`[notify:console] to=${to.name ?? '?'} ${to.phone ?? '(no phone)'}\n${message}`);
-    return { providerId: `console-${Date.now()}` };
+    return { providerId: `console-${Date.now()}`, channel: 'console' };
   },
 };
 
-/** Twilio WhatsApp (sandbox or approved sender), through the plain REST API, no SDK. */
+type TwilioChannel = 'whatsapp' | 'sms';
+
+/**
+ * Twilio through the plain REST API (no SDK). Tries the channels in TWILIO_CHANNELS order (default "whatsapp,sms"):
+ * - whatsapp: the sandbox or an approved WhatsApp sender. The doctor must have joined the sandbox (it lapses after 3 days).
+ * - sms: from TWILIO_PHONE_NUMBER. On a trial account the recipient must be a verified number.
+ * If WhatsApp fails (for example the sandbox join lapsed) the alert still goes out as SMS.
+ */
 export function twilioNotifier(env: NodeJS.ProcessEnv = process.env): Notifier {
   const sid = env.TWILIO_ACCOUNT_SID;
   const token = env.TWILIO_AUTH_TOKEN;
-  const from = env.TWILIO_WHATSAPP_FROM ?? 'whatsapp:+14155238886';
+  const whatsappFrom = env.TWILIO_WHATSAPP_FROM ?? 'whatsapp:+14155238886';
+  const smsFrom = env.TWILIO_PHONE_NUMBER;
+  const base = (env.TWILIO_API_BASE ?? 'https://api.twilio.com').replace(/\/$/, '');
   if (!sid || !token) throw new Error('NOTIFIER=twilio needs TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN');
+  const channels = (env.TWILIO_CHANNELS ?? 'whatsapp,sms')
+    .split(',')
+    .map((c) => c.trim().toLowerCase())
+    .filter((c): c is TwilioChannel => c === 'whatsapp' || c === 'sms');
+  if (channels.length === 0) throw new Error('TWILIO_CHANNELS must list whatsapp and/or sms');
+  if (channels.includes('sms') && !smsFrom && channels.length === 1) throw new Error('SMS needs TWILIO_PHONE_NUMBER');
+
+  async function sendVia(channel: TwilioChannel, phone: string, message: string): Promise<string | null> {
+    const from = channel === 'whatsapp' ? whatsappFrom : smsFrom;
+    if (!from) throw new Error('TWILIO_PHONE_NUMBER is not set');
+    const to = channel === 'whatsapp' ? `whatsapp:${phone}` : phone;
+    const res = await fetch(`${base}/2010-04-01/Accounts/${sid}/Messages.json`, {
+      method: 'POST',
+      headers: { Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString('base64')}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ To: to, From: from, Body: message }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const json = (await res.json().catch(() => ({}))) as { sid?: string; message?: string; code?: number };
+    if (!res.ok) throw new Error(`${json.code ? `error ${json.code}: ` : `HTTP ${res.status}: `}${json.message ?? 'send failed'}`);
+    return json.sid ?? null;
+  }
+
   return {
     name: 'twilio',
     async send(to, message) {
       if (!to.phone) throw new Error('The doctor has no phone number saved');
-      const body = new URLSearchParams({ To: `whatsapp:${to.phone}`, From: from, Body: message });
-      const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-        method: 'POST',
-        headers: { Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString('base64')}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-        body,
-        signal: AbortSignal.timeout(8000),
-      });
-      const json = (await res.json().catch(() => ({}))) as { sid?: string; message?: string };
-      if (!res.ok) throw new Error(`Twilio ${res.status}: ${json.message ?? 'send failed'}`);
-      return { providerId: json.sid ?? null };
+      const failures: string[] = [];
+      for (const channel of channels) {
+        try {
+          const providerId = await sendVia(channel, to.phone, message);
+          return { providerId, channel };
+        } catch (e) {
+          failures.push(`${channel}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      }
+      throw new Error(failures.join(' | '));
     },
   };
 }

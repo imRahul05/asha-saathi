@@ -202,8 +202,9 @@ export const sendAlert = defineTool({
     }
     try {
       const res = await ctx.notifier.send({ name: claimed.toName, phone: claimed.toPhone }, claimed.message);
-      await markAlertSent(ctx.db, claimed.id, ctx.notifier.name, res.providerId);
-      return { status: 'sent' as const, alreadySent: false, provider: ctx.notifier.name, sentAt: claimed.sentAt };
+      const provider = res.channel && res.channel !== ctx.notifier.name ? `${ctx.notifier.name}-${res.channel}` : ctx.notifier.name; // e.g. twilio-sms
+      await markAlertSent(ctx.db, claimed.id, provider, res.providerId);
+      return { status: 'sent' as const, alreadySent: false, provider, sentAt: claimed.sentAt };
     } catch (e) {
       await markAlertFailed(ctx.db, claimed.id, e instanceof Error ? e.message : String(e));
       throw new ToolError('SEND_FAILED', 'Alert भेजा नहीं जा सका, दोबारा कोशिश करेंगे।', 'The message could not be delivered. The draft is kept: you can call sendAlert again with the same token.');

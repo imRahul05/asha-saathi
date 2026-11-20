@@ -97,4 +97,4 @@ pnpm verify:mcp https://<your-app> $MCP_SHARED_SECRET --write   # also records a
 
 ## Not built yet
 
-Guideline Q&A with citations (RAG), real WhatsApp delivery (`NOTIFIER=twilio` is implemented but untested without credentials), an admin screen to register mothers (use `pnpm db:seed` or SQL for now), real accounts and roles, and the call transcript on the dashboard. See `docs/NEXT_AGENT_PROMPTS.md` for the remaining work split into self-contained tasks.
+Guideline Q&A with citations (RAG), verified real delivery through Twilio (`NOTIFIER=twilio` is implemented with a WhatsApp-then-SMS fallback and checked against a fake Twilio server, but not yet with real credentials), an admin screen to register mothers (use `pnpm db:seed` or SQL for now), real accounts and roles, and the call transcript on the dashboard. See `docs/NEXT_AGENT_PROMPTS.md` for the remaining work split into self-contained tasks.
