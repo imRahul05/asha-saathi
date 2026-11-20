@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { assessAnc } from '@/lib/rules/anc.v1';
 import { RecordVisitInput, Uuid, type Risk } from '@/lib/schemas';
 import { composeAlertMessage, composeSmsText } from '@/lib/alerts/message';
+import { callUrl } from '@/lib/call/link';
 import {
   alertsForVisit, claimAlertForSending, findBeneficiaries, findRecentDuplicateVisit, getAlertByToken, getAsha, getBeneficiary,
   getVisit, insertAlertDraft, insertFollowUp, insertVisit, markAlertFailed, markAlertSent, pendingFollowUps, recentVisits, todayCounts,
@@ -168,7 +169,7 @@ export const draftAlert = defineTool({
       throw new ToolError('NO_DOCTOR', 'डॉक्टर का नंबर सेव नहीं है।', 'This ASHA has no doctor phone saved. Tell her an admin must add it.');
     }
     const draft = open ?? (await insertAlertDraft(ctx.db, {
-      visitId: visit.id, toName: asha.doctorName, toPhone: asha.doctorPhone, message: composeAlertMessage(visit, b, asha, ctx.now()), smsText: composeSmsText(visit, b, asha, ctx.now()),
+      visitId: visit.id, toName: asha.doctorName, toPhone: asha.doctorPhone, message: composeAlertMessage(visit, b, asha, ctx.now(), process.env.PUBLIC_BASE_URL ? callUrl(process.env.PUBLIC_BASE_URL, visit, 'doctor', ctx.now().getTime()) : undefined), smsText: composeSmsText(visit, b, asha, ctx.now()),
       token: newToken(), ttlMinutes: ALERT_TTL_MINUTES,
     }));
     return {

@@ -15,7 +15,7 @@ const STEPS = [
   { t: 'Understand', d: 'Saathi picks out blood pressure, haemoglobin, weeks of pregnancy and symptoms.' },
   { t: 'Check', d: 'Fixed clinical rules set the risk level. The AI explains the result; it cannot change it.' },
   { t: 'Confirm', d: 'Saathi reads out the draft alert. Nothing is sent until you say haan.' },
-  { t: 'Follow up', d: 'The doctor gets a WhatsApp message and the next visit goes on your list.' },
+  { t: 'Follow up', d: 'The doctor gets a message with a one-tap voice call link, and the next visit goes on your list.' },
 ];
 
 const rise = (i: number) => ({ '--i': i }) as CSSProperties;
@@ -38,8 +38,8 @@ export function Landing() {
               </span>
             </h1>
             <p className="hero-rise mt-6 max-w-xl text-lg leading-8 text-white/80 sm:text-xl sm:leading-9" style={rise(2)}>
-              ASHA Saathi is a voice assistant for ASHA health workers. After a home visit, speak in Hindi, Kannada or
-              English. It records the visit, checks for danger signs, and tells the doctor when a mother needs help.
+              ASHA Saathi is a voice assistant for ASHA health workers. After a home visit, speak in Hindi, Kannada, Tamil,
+              English or five other languages. It records the visit, checks for danger signs, and tells the doctor when a mother needs help.
             </p>
             <div className="hero-rise mt-9 flex flex-wrap items-center gap-4" style={rise(3)}>
               <Link href="/app" prefetch={false} className={CTA}>
@@ -94,7 +94,7 @@ export function Landing() {
               { i: Mic, t: 'Records the visit by voice', d: 'No forms to fill. Say it once and the visit is saved against the right mother.' },
               { i: ShieldCheck, t: 'Flags risk with fixed rules', d: 'Written rules decide high, watch or normal, and show the guideline behind each one.' },
               { i: FileText, t: 'Explains in plain words', d: 'Ask what to tell the family. Answers come from official guidelines, with the source shown.' },
-              { i: BellRing, t: 'Alerts the doctor, once', d: 'After you say yes, one WhatsApp message goes out. Saying yes twice never sends two.' },
+              { i: BellRing, t: 'Alerts the doctor, once', d: 'After you say yes, one message goes out with a link to talk by voice. Saying yes twice never sends two.' },
             ].map(({ i: Icon, t, d }, idx) => (
               <Reveal key={t} delay={(idx % 2) * 110} from={idx % 2 ? 'right' : 'left'} className="flex gap-4">
                 <span className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-asha-teal text-white">
@@ -144,12 +144,15 @@ export function Landing() {
             Speak the way you speak.
           </Reveal>
           <Reveal as="p" delay={100} className="mt-4 max-w-xl text-lg leading-8 text-asha-muted">
-            Saathi replies in the language you used last. Switch in the middle of a call and it follows.
+            Pick your language before the call. Saathi listens and replies in it, start to finish.
           </Reveal>
-          <div className="mt-12 grid gap-6 sm:grid-cols-3">
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {[
               ['नमस्ते दीदी', 'हिंदी'],
               ['ನಮಸ್ಕಾರ ಅಕ್ಕ', 'ಕನ್ನಡ'],
+              ['வணக்கம் அக்கா', 'தமிழ்'],
+              ['നമസ്കാരം ചേച്ചി', 'മലയാളം'],
+              ['નમસ્તે બહેન', 'ગુજરાતી'],
               ['Hello didi', 'English'],
             ].map(([hello, name], i) => (
               <Reveal key={name} delay={i * 130} from="scale" className="border-t-4 border-asha-teal pt-5">

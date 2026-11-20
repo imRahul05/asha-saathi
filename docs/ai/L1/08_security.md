@@ -90,6 +90,12 @@ Re-audit security docs when any of these change:
 - environment variable set or naming
 - provider integration path (default vs BYOK)
 
+## Call links
+
+- A call link is `base64url(JSON{visitId, ashaId, role, exp}).HMAC` signed with the session secret under the scope `call-link` (so a session cookie cannot be replayed as a link). Expiry 6 hours. It is not an Agora token; `/api/call/join` mints a 1-hour RTC token per join.
+- The join response contains only what a doctor needs (mother's name, village, weeks, BP, Hb, symptoms, risk reasons). Links cannot be revoked before expiry; treat them as sensitive.
+- Local development without `SESSION_SECRET` uses an insecure dev-only fallback and logs a warning; production throws.
+
 ## Related Deep Dives
 
 - [conversation_lifecycle.md](L2/conversation_lifecycle.md) — Token issuance and renewal sequence details.

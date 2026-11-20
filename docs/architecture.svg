@@ -1,0 +1,114 @@
+<svg width="1240" height="860" viewBox="0 0 1240 860" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t d" font-family="Inter, -apple-system, Segoe UI, Roboto, sans-serif">
+  <title id="t">ASHA Saathi architecture</title>
+  <desc id="d">An ASHA speaks in her browser. Agora real-time audio carries her voice to Agora's managed speech recognition and language model, which call tools on our Next.js server. The server applies fixed clinical rules, stores visits in Neon Postgres and sends the doctor an alert through Telegram, WhatsApp or SMS. The alert carries a link that opens a browser voice call between the doctor and the ASHA over Agora RTC.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#334155"/></marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#0F766E"/></marker>
+    <marker id="p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#7C3AED"/></marker>
+  </defs>
+  <rect width="1240" height="860" rx="20" fill="#F8FAFC"/>
+  <text x="40" y="44" font-size="26" font-weight="800" fill="#0F172A">ASHA Saathi: how it works</text>
+  <text x="40" y="68" font-size="14" fill="#475569">Voice copilot for ASHA health workers. Solid arrows: the AI voice call. Purple arrows: the doctor call. Numbers follow one visit, in order.</text>
+
+  <!-- ASHA browser -->
+  <rect x="40" y="110" width="300" height="250" rx="18" fill="#DCFCE7" stroke="#16A34A" stroke-width="2"/>
+  <text x="60" y="142" font-size="18" font-weight="800" fill="#14532D">ASHA's browser</text>
+  <text x="60" y="164" font-size="13" fill="#166534">Next.js app, any phone or laptop</text>
+  <rect x="60" y="180" width="260" height="40" rx="10" fill="#fff" stroke="#86EFAC"/><text x="74" y="205" font-size="13" fill="#14532D">Language picker (9 Indian languages)</text>
+  <rect x="60" y="228" width="260" height="40" rx="10" fill="#fff" stroke="#86EFAC"/><text x="74" y="253" font-size="13" fill="#14532D">Voice screen: orb, live transcript</text>
+  <rect x="60" y="276" width="260" height="40" rx="10" fill="#fff" stroke="#86EFAC"/><text x="74" y="301" font-size="13" fill="#14532D">Result card: risk, reasons, alert sent</text>
+  <text x="60" y="344" font-size="12" fill="#166534">agora-rtc-react + RTM + AgoraVoiceAI</text>
+
+  <!-- Doctor browser -->
+  <rect x="40" y="560" width="300" height="190" rx="18" fill="#EDE9FE" stroke="#7C3AED" stroke-width="2"/>
+  <text x="60" y="592" font-size="18" font-weight="800" fill="#4C1D95">Doctor's browser or phone</text>
+  <text x="60" y="614" font-size="13" fill="#5B21B6">No app, no sign-up: opens a link</text>
+  <rect x="60" y="632" width="260" height="40" rx="10" fill="#fff" stroke="#C4B5FD"/><text x="74" y="657" font-size="13" fill="#4C1D95">Visit summary beside the call</text>
+  <rect x="60" y="680" width="260" height="40" rx="10" fill="#fff" stroke="#C4B5FD"/><text x="74" y="705" font-size="13" fill="#4C1D95">Voice call: join, mute, leave</text>
+
+  <!-- Next.js server -->
+  <rect x="440" y="110" width="380" height="530" rx="18" fill="#CCFBF1" stroke="#0F766E" stroke-width="2"/>
+  <text x="460" y="142" font-size="18" font-weight="800" fill="#134E4A">Next.js on Vercel (Mumbai)</text>
+  <text x="460" y="164" font-size="13" fill="#115E59">Route handlers + shared code</text>
+  <g font-size="13" fill="#134E4A">
+    <rect x="460" y="180" width="340" height="34" rx="9" fill="#fff" stroke="#5EEAD4"/><text x="474" y="202">/api/auth/demo: signed session cookie</text>
+    <rect x="460" y="220" width="340" height="34" rx="9" fill="#fff" stroke="#5EEAD4"/><text x="474" y="242">/api/generate-agora-token: RTC + RTM token</text>
+    <rect x="460" y="260" width="340" height="34" rx="9" fill="#fff" stroke="#5EEAD4"/><text x="474" y="282">/api/invite-agent: starts the agent, checks it joined</text>
+    <rect x="460" y="300" width="340" height="34" rx="9" fill="#fff" stroke="#5EEAD4"/><text x="474" y="322">/api/mcp: tools the agent calls (7 tools)</text>
+    <rect x="460" y="340" width="340" height="34" rx="9" fill="#fff" stroke="#5EEAD4"/><text x="474" y="362">/api/session/state: cheap polling for the screen</text>
+    <rect x="460" y="380" width="340" height="34" rx="9" fill="#EDE9FE" stroke="#A78BFA"/><text x="474" y="402" fill="#4C1D95">/api/call/link + /api/call/join: doctor call</text>
+  </g>
+  <rect x="460" y="430" width="340" height="86" rx="12" fill="#FEF3C7" stroke="#D97706"/>
+  <text x="474" y="454" font-size="14" font-weight="800" fill="#78350F">Rules engine (anc.v1)</text>
+  <text x="474" y="474" font-size="12" fill="#92400E">Fixed clinical rules decide normal / watch /</text>
+  <text x="474" y="490" font-size="12" fill="#92400E">high / urgent and cite ICMR. The AI cannot change it.</text>
+  <text x="474" y="506" font-size="12" fill="#92400E">Two-step alert: draft, then send once.</text>
+  <rect x="460" y="528" width="340" height="96" rx="12" fill="#fff" stroke="#5EEAD4"/>
+  <text x="474" y="552" font-size="13" font-weight="700" fill="#134E4A">Also here</text>
+  <text x="474" y="572" font-size="12" fill="#115E59">Prompt builder + language table (lib/languages.ts)</text>
+  <text x="474" y="590" font-size="12" fill="#115E59">Notifier chain (Telegram, WhatsApp, SMS)</text>
+  <text x="474" y="608" font-size="12" fill="#115E59">Usage guard: limits agent starts per visitor</text>
+
+  <!-- Agora cloud -->
+  <rect x="940" y="110" width="260" height="300" rx="18" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="960" y="142" font-size="18" font-weight="800" fill="#1E3A8A">Agora cloud</text>
+  <rect x="960" y="158" width="220" height="56" rx="10" fill="#fff" stroke="#93C5FD"/><text x="974" y="182" font-size="13" font-weight="700" fill="#1E3A8A">RTC channel</text><text x="974" y="200" font-size="12" fill="#1D4ED8">real-time audio + RTM messages</text>
+  <rect x="960" y="222" width="220" height="56" rx="10" fill="#fff" stroke="#93C5FD"/><text x="974" y="246" font-size="13" font-weight="700" fill="#1E3A8A">Conversational AI engine</text><text x="974" y="264" font-size="12" fill="#1D4ED8">turn taking, interruptions</text>
+  <rect x="960" y="286" width="220" height="50" rx="10" fill="#fff" stroke="#93C5FD"/><text x="974" y="308" font-size="13" font-weight="700" fill="#1E3A8A">Speech to text</text><text x="974" y="326" font-size="12" fill="#1D4ED8">Deepgram nova-3, one language per call</text>
+  <rect x="960" y="344" width="220" height="50" rx="10" fill="#fff" stroke="#93C5FD"/><text x="974" y="366" font-size="13" font-weight="700" fill="#1E3A8A">Language model</text><text x="974" y="384" font-size="12" fill="#1D4ED8">managed gpt-4.1-mini, calls our tools</text>
+
+  <!-- Murf -->
+  <rect x="940" y="440" width="260" height="84" rx="18" fill="#FFEDD5" stroke="#EA580C" stroke-width="2"/>
+  <text x="960" y="472" font-size="17" font-weight="800" fill="#7C2D12">Murf Falcon voice</text>
+  <text x="960" y="494" font-size="12" fill="#9A3412">"Pooja", speaks the call language</text>
+  <text x="960" y="510" font-size="12" fill="#9A3412">streams audio back through Agora</text>
+
+  <!-- Neon -->
+  <rect x="940" y="552" width="260" height="104" rx="18" fill="#E2E8F0" stroke="#475569" stroke-width="2"/>
+  <text x="960" y="584" font-size="17" font-weight="800" fill="#0F172A">Neon Postgres</text>
+  <text x="960" y="606" font-size="12" fill="#334155">ashas, mothers, visits, alerts,</text>
+  <text x="960" y="622" font-size="12" fill="#334155">follow-ups, events (audit trail),</text>
+  <text x="960" y="638" font-size="12" fill="#334155">agent_starts (usage limits)</text>
+
+  <!-- Alert channels -->
+  <rect x="440" y="690" width="760" height="130" rx="18" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
+  <text x="460" y="722" font-size="17" font-weight="800" fill="#831843">Doctor alert (sent once, only after the ASHA says yes)</text>
+  <rect x="460" y="740" width="220" height="62" rx="10" fill="#fff" stroke="#F9A8D4"/><text x="474" y="764" font-size="13" font-weight="700" fill="#831843">1. Telegram bot</text><text x="474" y="784" font-size="12" fill="#9D174D">colour banner, bold headline</text>
+  <rect x="700" y="740" width="220" height="62" rx="10" fill="#fff" stroke="#F9A8D4"/><text x="714" y="764" font-size="13" font-weight="700" fill="#831843">2. Twilio WhatsApp</text><text x="714" y="784" font-size="12" fill="#9D174D">falls back if 1 fails</text>
+  <rect x="940" y="740" width="240" height="62" rx="10" fill="#fff" stroke="#F9A8D4"/><text x="954" y="764" font-size="13" font-weight="700" fill="#831843">3. Twilio SMS</text><text x="954" y="784" font-size="12" fill="#9D174D">short ASCII text, last resort</text>
+
+  <!-- Arrows: AI call -->
+  <path d="M340 240 H440" stroke="#334155" stroke-width="2.5" marker-end="url(#a)"/><circle cx="390" cy="240" r="13" fill="#0F172A"/><text x="390" y="245" font-size="13" font-weight="800" fill="#fff" text-anchor="middle">1</text>
+  <text x="352" y="224" font-size="11" fill="#334155">sign in, token,</text><text x="352" y="270" font-size="11" fill="#334155">start agent</text>
+  <path d="M190 110 V90 H1070 V110" stroke="#334155" stroke-width="2.5" fill="none" marker-end="url(#a)" marker-start="url(#a)"/><circle cx="640" cy="92" r="13" fill="#0F172A"/><text x="640" y="97" font-size="13" font-weight="800" fill="#fff" text-anchor="middle">2</text>
+  <text x="668" y="84" font-size="11" fill="#334155">her voice goes up, the agent's voice comes back</text>
+  <path d="M820 276 H940" stroke="#334155" stroke-width="2.5" marker-end="url(#a)"/><circle cx="880" cy="276" r="13" fill="#0F172A"/><text x="880" y="281" font-size="13" font-weight="800" fill="#fff" text-anchor="middle">3</text>
+  <text x="826" y="262" font-size="11" fill="#334155">start agent</text>
+  <path d="M940 372 L820 322" stroke="#334155" stroke-width="2.5" marker-end="url(#a)"/><circle cx="880" cy="347" r="13" fill="#0F172A"/><text x="880" y="352" font-size="13" font-weight="800" fill="#fff" text-anchor="middle">4</text>
+  <text x="832" y="420" font-size="11" fill="#334155">tool calls</text><text x="832" y="434" font-size="11" fill="#334155">(shared secret)</text>
+  <path d="M1070 394 V440" stroke="#334155" stroke-width="2.5" marker-end="url(#a)"/>
+  <path d="M820 560 H940" stroke="#334155" stroke-width="2.5" marker-end="url(#a)" marker-start="url(#a)"/><circle cx="880" cy="560" r="13" fill="#0F172A"/><text x="880" y="565" font-size="13" font-weight="800" fill="#fff" text-anchor="middle">5</text>
+  <text x="826" y="548" font-size="11" fill="#334155">save visit</text>
+  <path d="M630 640 V690" stroke="#334155" stroke-width="2.5" marker-end="url(#a)"/><circle cx="630" cy="665" r="13" fill="#0F172A"/><text x="630" y="670" font-size="13" font-weight="800" fill="#fff" text-anchor="middle">6</text>
+  <path d="M340 330 H440" stroke="#334155" stroke-width="2" stroke-dasharray="6 5" fill="none" marker-end="url(#a)"/>
+  <text x="352" y="322" font-size="11" fill="#334155">polls state</text>
+
+  <!-- Doctor call (purple) -->
+  <path d="M440 740 H400 C 350 740, 350 700, 340 690" stroke="#7C3AED" stroke-width="2.5" fill="none" marker-end="url(#p)"/><circle cx="392" cy="742" r="13" fill="#7C3AED"/><text x="392" y="747" font-size="13" font-weight="800" fill="#fff" text-anchor="middle">7</text>
+  <text x="60" y="772" font-size="11" fill="#5B21B6">alert text with a call link</text>
+  <path d="M190 750 V846 H1222 V134 H1204" stroke="#7C3AED" stroke-width="2.5" stroke-dasharray="8 6" fill="none" marker-end="url(#p)"/><circle cx="1222" cy="450" r="13" fill="#7C3AED"/><text x="1222" y="455" font-size="13" font-weight="800" fill="#fff" text-anchor="middle">8</text>
+  <text x="700" y="838" font-size="11" fill="#5B21B6" text-anchor="middle">doctor and ASHA talk in one Agora RTC channel</text>
+
+  <!-- Legend -->
+  <g font-size="12" fill="#334155">
+    <text x="40" y="400" font-weight="700">Steps for one visit</text>
+    <text x="40" y="420">1 ASHA signs in, picks a language, taps start.</text>
+    <text x="40" y="438">2 Voice flows both ways through Agora.</text>
+    <text x="40" y="456">3 The server starts the agent and checks it joined.</text>
+    <text x="40" y="474">4 The agent hears, then calls our tools.</text>
+    <text x="40" y="492">5 Rules score the visit; it is saved.</text>
+    <text x="40" y="510">6 She says yes; the alert is sent once.</text>
+    <text x="40" y="528">7 Doctor taps the link in the message.</text>
+    <text x="40" y="546">8 Browser call, audio only, no account.</text>
+  </g>
+</svg>
