@@ -18,7 +18,7 @@ export type Visit = {
 export type Alert = {
   id: string; visitId: string; toName: string | null; toPhone: string | null; message: string;
   status: 'draft' | 'sent' | 'failed'; confirmToken: string; provider: string | null; providerId: string | null;
-  error: string | null; createdAt: string; expiresAt: string; sentAt: string | null;
+  error: string | null; createdAt: string; expiresAt: string; sentAt: string | null; smsText: string | null;
 };
 export type FollowUp = { id: string; ashaId: string; beneficiaryId: string; visitId: string | null; dueDate: string; reason: string | null; status: string };
 export type EventRow = {
@@ -52,7 +52,7 @@ const toAlert = (r: Row): Alert => ({
   id: String(r.id), visitId: String(r.visit_id), toName: (r.to_name as string) ?? null, toPhone: (r.to_phone as string) ?? null,
   message: String(r.message), status: r.status as Alert['status'], confirmToken: String(r.confirm_token),
   provider: (r.provider as string) ?? null, providerId: (r.provider_id as string) ?? null, error: (r.error as string) ?? null,
-  createdAt: iso(r.created_at)!, expiresAt: iso(r.expires_at)!, sentAt: iso(r.sent_at),
+  createdAt: iso(r.created_at)!, expiresAt: iso(r.expires_at)!, sentAt: iso(r.sent_at), smsText: (r.sms_text as string) ?? null,
 });
 const toFollowUp = (r: Row): FollowUp => ({
   id: String(r.id), ashaId: String(r.asha_id), beneficiaryId: String(r.beneficiary_id), visitId: (r.visit_id as string) ?? null,
@@ -174,12 +174,12 @@ export async function recentVisits(db: Db, beneficiaryId: string, limit = 3): Pr
 // ---------- alerts (two-phase, idempotent) ----------
 export async function insertAlertDraft(
   db: Db,
-  a: { visitId: string; toName: string | null; toPhone: string | null; message: string; token: string; ttlMinutes: number },
+  a: { visitId: string; toName: string | null; toPhone: string | null; message: string; smsText?: string; token: string; ttlMinutes: number },
 ): Promise<Alert> {
   const rows = await db.query<Row>(
-    `insert into alerts (visit_id, to_name, to_phone, message, status, confirm_token, expires_at)
-     values ($1,$2,$3,$4,'draft',$5, now() + ($6 || ' minutes')::interval) returning *`,
-    [a.visitId, a.toName, a.toPhone, a.message, a.token, String(a.ttlMinutes)],
+    `insert into alerts (visit_id, to_name, to_phone, message, sms_text, status, confirm_token, expires_at)
+     values ($1,$2,$3,$4,$7,'draft',$5, now() + ($6 || ' minutes')::interval) returning *`,
+    [a.visitId, a.toName, a.toPhone, a.message, a.token, String(a.ttlMinutes), a.smsText ?? null],
   );
   return toAlert(rows[0]);
 }

@@ -28,3 +28,22 @@ export function composeAlertMessage(visit: Visit, b: Beneficiary, asha: Asha, no
   lines.push('Please review soon.');
   return lines.join('\n');
 }
+
+const LEVEL_SHORT: Record<string, string> = { urgent: 'URGENT', high: 'HIGH RISK', watch: 'WATCH', normal: 'NORMAL' };
+
+/**
+ * Compact SMS text: ASCII only (non-GSM characters make segments hold 70 characters instead of 160) and short, because
+ * trial Twilio accounts reject multi-segment SMS (error 30044) and add their own prefix. Built from recorded facts.
+ */
+export function composeSmsText(visit: Visit, b: Beneficiary, asha: Asha, now: Date = new Date()): string {
+  const time = new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' }).format(now);
+  const parts: string[] = [`${LEVEL_SHORT[visit.riskLevel] ?? 'ANC'}: ${b.name}${b.village ? `, ${b.village}` : ''}${visit.gestationWeeks ? `, ${visit.gestationWeeks}wk` : ''}.`];
+  if (visit.bpSys != null && visit.bpDia != null) parts.push(`BP ${visit.bpSys}/${visit.bpDia}.`);
+  if (visit.hb != null) parts.push(`Hb ${visit.hb}.`);
+  const sym = visit.symptoms.map((x) => (SYMPTOM_LABEL[x] ?? x)).slice(0, 2).join(', ');
+  if (sym) parts.push(`${sym}.`);
+  parts.push(`ASHA ${asha.name.split(' ')[0]} ${time}. Please review.`);
+  // eslint-disable-next-line no-control-regex
+  const ascii = parts.join(' ').replace(/[^\x20-\x7E]/g, '');
+  return ascii.length <= 110 ? ascii : `${ascii.slice(0, 107)}...`;
+}

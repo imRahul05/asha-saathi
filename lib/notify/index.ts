@@ -4,7 +4,7 @@ export type Recipient = { name: string | null; phone: string | null };
 export type SendResult = { providerId: string | null; /** which channel delivered it, e.g. "whatsapp" or "sms" */ channel?: string };
 export interface Notifier {
   readonly name: string;
-  send(to: Recipient, message: string): Promise<SendResult>;
+  send(to: Recipient, message: string, opts?: { sms?: string }): Promise<SendResult>;
 }
 
 /** Logs instead of sending. The dashboard still shows the alert as sent. Default when no provider is configured. */
@@ -83,12 +83,12 @@ export function twilioNotifier(env: NodeJS.ProcessEnv = process.env): Notifier {
 
   return {
     name: 'twilio',
-    async send(to, message) {
+    async send(to, message, opts) {
       if (!to.phone) throw new Error('The doctor has no phone number saved');
       const failures: string[] = [];
       for (const channel of channels) {
         try {
-          const providerId = await sendVia(channel, to.phone, message);
+          const providerId = await sendVia(channel, to.phone, channel === 'sms' ? (opts?.sms ?? message.slice(0, 110)) : message);
           return { providerId, channel };
         } catch (e) {
           failures.push(`${channel}: ${e instanceof Error ? e.message : String(e)}`);

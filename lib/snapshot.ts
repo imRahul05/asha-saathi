@@ -46,7 +46,7 @@ async function toSnapshotVisit(db: Db, v: Visit, ashaName: { doctor: string | nu
       })),
     },
     alert: alert
-      ? { status: alert.status, doctor: alert.toName ?? ashaName?.doctor ?? null, phc: ashaName?.phc ?? null, message: alert.message, sentAt: alert.sentAt, error: alert.error }
+      ? { status: alert.status, channel: alert.provider, doctor: alert.toName ?? ashaName?.doctor ?? null, phc: ashaName?.phc ?? null, message: alert.message, sentAt: alert.sentAt, error: alert.error }
       : null,
     followUp: fu[0]
       ? { dueDate: fu[0].due_date instanceof Date ? fu[0].due_date.toISOString().slice(0, 10) : String(fu[0].due_date).slice(0, 10), reason: (fu[0].reason as string) ?? null }

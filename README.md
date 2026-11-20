@@ -36,6 +36,12 @@ Why it is built this way:
 - **Everything is observable.** Each tool call is stored with its timing and shown in the dashboard timeline.
 - **Tools never throw.** A failure becomes a plain message the agent can say.
 
+## Alerts: how delivery works
+
+`NOTIFIER=twilio` tries **WhatsApp first, then SMS** from your Twilio number. Twilio accepts a WhatsApp message and only afterwards reports that the phone has not joined the sandbox (error 63015), so the notifier watches the status for about 3 seconds and falls through to SMS. SMS uses a short ASCII text (`sms_text`), because trial accounts reject long SMS (error 30044). The screen and the dashboard show the channel that actually delivered. Verified on production: spoken yes, one alert, delivered by SMS. WhatsApp works once the doctor's phone sends the sandbox join phrase.
+
+`pnpm twilio:test` sends one test message to `SEED_DOCTOR_PHONE`.
+
 ## Evidence and honest limits
 
 Rule thresholds come from the official documents we hold. See `knowledge/RULES_EVIDENCE.md` for the verbatim quotes and page numbers (ICMR STW, NHM CHO booklet, PMSMA).
@@ -97,4 +103,4 @@ pnpm verify:mcp https://<your-app> $MCP_SHARED_SECRET --write   # also records a
 
 ## Not built yet
 
-Guideline Q&A with citations (RAG), verified real delivery through Twilio (`NOTIFIER=twilio` is implemented with a WhatsApp-then-SMS fallback and checked against a fake Twilio server, but not yet with real credentials), an admin screen to register mothers (use `pnpm db:seed` or SQL for now), real accounts and roles, and the call transcript on the dashboard. See `docs/NEXT_AGENT_PROMPTS.md` for the remaining work split into self-contained tasks.
+Guideline Q&A with citations (RAG), WhatsApp delivery (it needs the doctor's phone to join the Twilio sandbox, which lapses after 3 days), an admin screen to register mothers (use `pnpm db:seed` or SQL for now), real accounts and roles, and the call transcript on the dashboard. See `docs/NEXT_AGENT_PROMPTS.md` for the remaining work split into self-contained tasks.

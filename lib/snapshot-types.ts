@@ -12,7 +12,7 @@ export type SnapshotVisit = {
     /** citation is set only when the rule's evidence is verified ('cited'); otherwise null and the UI must not show a source. */
     reasons: { code: string; text: string; level: RiskLevel; citation: { label: string; page?: string } | null }[];
   };
-  alert: null | { status: 'draft' | 'sent' | 'failed'; doctor: string | null; phc: string | null; message: string; sentAt: string | null; error: string | null };
+  alert: null | { status: 'draft' | 'sent' | 'failed'; channel: string | null; doctor: string | null; phc: string | null; message: string; sentAt: string | null; error: string | null };
   followUp: null | { dueDate: string; reason: string | null };
 };
 

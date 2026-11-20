@@ -68,6 +68,8 @@ create table if not exists alerts (
   sent_at          timestamptz
 );
 create index if not exists alerts_visit_idx on alerts (visit_id);
+-- Compact text for SMS (trial accounts reject long SMS). WhatsApp uses the full message.
+alter table alerts add column if not exists sms_text text;
 
 create table if not exists followups (
   id               uuid primary key default gen_random_uuid(),
