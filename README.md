@@ -70,6 +70,8 @@ Agora cannot call `localhost`, so the voice agent needs a public `PUBLIC_BASE_UR
 
 Deploy: `vercel deploy --prod`, with the same variables set in Vercel (Production and Preview) and Deployment Protection off for the production URL.
 
+Deployment notes learned the hard way: (1) the functions run in **Mumbai (`bom1`, in `vercel.json`)**. When the agent-start request came from Vercel's US region, Agora accepted it and then the agent often failed to join the call ("RTC connection error"), so the browser showed no transcript. From Mumbai 8 of 8 starts joined. (2) `/api/invite-agent` also checks about 1.5 s after starting and starts a fresh agent if the first one failed, up to 3 times. (3) Node is pinned to 24.x in `package.json`. Moving Neon closer to Mumbai (for example Singapore) would cut about 0.3 s per database call.
+
 ### Checks
 
 ```bash
@@ -91,8 +93,8 @@ pnpm verify:mcp https://<your-app> $MCP_SHARED_SECRET --write   # also records a
 | `lib/snapshot.ts`, `app/api/session/state`, `app/api/dashboard` | what the screens read |
 | `components/landing/`, `components/asha/` | landing page, voice screen, result and dashboard screens |
 | `knowledge/` | verbatim guideline text with page numbers, and the rules evidence table |
-| `ARCHITECTURE.md`, `IMPLEMENTATION_PLAN.md` | design and plan |
+| `docs/` | `ARCHITECTURE.md` (design), `IMPLEMENTATION_PLAN.md` (plan and status), `NEXT_AGENT_PROMPTS.md` (remaining work), `LOCAL_AGENT_PROMPTS.md` (the original test prompts), `verified/` (scripts that verified the SDK shapes) |
 
 ## Not built yet
 
-Guideline Q&A with citations (RAG), real WhatsApp delivery (`NOTIFIER=twilio` is implemented but untested without credentials), an admin screen to register mothers (use `pnpm db:seed` or SQL for now), real accounts and roles, and the call transcript on the dashboard. See `NEXT_AGENT_PROMPTS.md` for the remaining work split into self-contained tasks.
+Guideline Q&A with citations (RAG), real WhatsApp delivery (`NOTIFIER=twilio` is implemented but untested without credentials), an admin screen to register mothers (use `pnpm db:seed` or SQL for now), real accounts and roles, and the call transcript on the dashboard. See `docs/NEXT_AGENT_PROMPTS.md` for the remaining work split into self-contained tasks.

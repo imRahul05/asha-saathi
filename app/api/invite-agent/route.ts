@@ -119,16 +119,28 @@ export async function POST(request: NextRequest) {
           : new MiniMaxTTS({ model: 'speech_2_6_turbo', voiceId: 'English_captivating_female1' }),
       );
 
-    const session = agent.createSession({
-      channel: channel_name,
-      agentUid: String(DEFAULT_AGENT_UID),
-      remoteUids: [requester_id], // only this user's audio is processed
-      idleTimeout: 60,
-      expiresIn: ExpiresIn.minutes(12), // a demo call ends on its own, so a forgotten tab cannot burn minutes
-      debug: false,
-    });
-
-    const agentId = await session.start();
+    // Agora sometimes accepts the start request and then the agent fails to join the channel a moment later
+    // ("RTC connection error"). Start, check shortly after, and start a fresh agent if that happened,
+    // so the browser only ever sees an agent that is really in the call.
+    let agentId = '';
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const session = agent.createSession({
+        channel: channel_name,
+        agentUid: String(DEFAULT_AGENT_UID),
+        remoteUids: [requester_id], // only this user's audio is processed
+        idleTimeout: 60,
+        expiresIn: ExpiresIn.minutes(12), // a demo call ends on its own, so a forgotten tab cannot burn minutes
+        debug: false,
+      });
+      agentId = await session.start();
+      await new Promise((r) => setTimeout(r, 1500));
+      const info = (await session.getInfo().catch(() => null)) as { status?: string; message?: string } | null;
+      if (!info || String(info.status).toUpperCase() !== 'FAILED') break; // running (or status unavailable: assume fine)
+      console.warn(`[invite-agent] agent failed to join (attempt ${attempt}/3): ${info.message ?? 'unknown reason'}`);
+      if (attempt === 3) {
+        return NextResponse.json({ error: 'AGENT_UNAVAILABLE', message: 'The voice agent could not join the call. Please try again.' }, { status: 503 });
+      }
+    }
     return NextResponse.json({
       agent_id: agentId,
       create_ts: Math.floor(Date.now() / 1000),

@@ -11,7 +11,7 @@
 **Verification legend.** Every technical claim carries one of these tags:
 - ✅ **VERIFIED-CODE**: I ran it, or read it in the installed package source / cloned repo.
 - ✅ **VERIFIED-DOC**: read in the official docs today.
-- 🧪 **LOCAL-TEST**: needs your API keys, phone or browser. There's an exact prompt for it in `LOCAL_AGENT_PROMPTS.md`, with pass/fail criteria. Nothing here is "assumed". Anything that isn't verified is a named test.
+- 🧪 **LOCAL-TEST**: needs your API keys, phone or browser. There's an exact prompt for it in `docs/LOCAL_AGENT_PROMPTS.md`, with pass/fail criteria. Nothing here is "assumed". Anything that isn't verified is a named test.
 
 ---
 
@@ -327,7 +327,7 @@ Keep the original design: `CustomLLM` pointing at `/api/chat/completions` (templ
 
 ## 9. Agent start route (`/api/invite-agent`)
 
-Uses the verified builder chain (see `verified-agent-config.mjs`; the spike version is `app/api/spike-agent/route.ts`):
+Uses the verified builder chain (see `docs/verified/agent-config.mjs`; the spike version is `app/api/spike-agent/route.ts`):
 
 ```ts
 const agent = new Agent({
