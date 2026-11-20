@@ -5,11 +5,12 @@ import { IMicrophoneAudioTrack } from 'agora-rtc-react';
 import { Settings, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  Menu,
+  MenuContent,
+  MenuItem,
+  MenuLabel,
+  MenuTrigger,
+} from '@/components/ui/menu';
 
 interface MicrophoneSelectorProps {
   localMicrophoneTrack: IMicrophoneAudioTrack | null;
@@ -125,43 +126,38 @@ export function MicrophoneSelector({
   }
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+    <Menu open={isOpen} onOpenChange={setIsOpen}>
       {/* Trigger button for the device list anchored in the in-call control dock. */}
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full w-10 h-10 bg-secondary hover:bg-accent/10 border border-border"
-          title="Select microphone"
-        >
-          <Settings className="h-4 w-4 text-foreground" />
-        </Button>
-      </DropdownMenuTrigger>
-      {/* Device menu: current selection plus all discovered microphones. */}
-      <DropdownMenuContent
-        align="center"
-        className="w-56 bg-popover border-border"
+      <MenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full w-10 h-10 bg-secondary hover:bg-accent/10 border border-border"
+            title="Select microphone"
+          />
+        }
       >
-        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-          Microphone
-        </div>
+        <Settings className="h-4 w-4 text-foreground" />
+      </MenuTrigger>
+      {/* Device menu: current selection plus all discovered microphones. */}
+      <MenuContent align="center" className="w-56">
+        <MenuLabel>Microphone</MenuLabel>
         {devices.map((device) => (
-          <DropdownMenuItem
+          <MenuItem
             key={device.deviceId}
             onClick={() => handleDeviceChange(device.deviceId)}
-            className={`cursor-pointer ${
-              device.deviceId === currentDeviceId
-                ? 'bg-accent/15 text-primary'
-                : 'text-foreground hover:bg-accent/10'
-            }`}
+            className={
+              device.deviceId === currentDeviceId ? 'bg-accent/15 text-primary' : 'text-foreground'
+            }
           >
             <span className="truncate">{device.label}</span>
             {device.deviceId === currentDeviceId && (
               <Check className="ml-auto h-3.5 w-3.5 text-primary" />
             )}
-          </DropdownMenuItem>
+          </MenuItem>
         ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </MenuContent>
+    </Menu>
   );
 }

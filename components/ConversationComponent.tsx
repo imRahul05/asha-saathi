@@ -21,8 +21,6 @@ import {
   type UserTranscription,
   type AgentTranscription,
 } from 'agora-agent-client-toolkit';
-import { AgentVisualizer } from 'agora-agent-uikit';
-import { MicButtonWithVisualizer } from 'agora-agent-uikit/rtc';
 import { DEFAULT_AGENT_UID } from '@/lib/agora';
 import {
   getCurrentInProgressMessage,
@@ -36,13 +34,12 @@ import {
   getConversationIssueSeverity,
   type ConnectionIssue,
 } from './ConversationErrorCard';
-import { ConnectionStatusPanel } from './ConnectionStatusPanel';
-import { QuickstartConversationLayout } from './QuickstartConversationLayout';
+import { VoiceScreen } from './asha/VoiceScreen';
+import type { OrbState } from '@/lib/asha/lang';
 import {
   QuickstartPipelineMetrics,
   type QuickstartAgentMetric,
 } from './QuickstartPipelineMetrics';
-import { QuickstartTranscriptPanel } from './QuickstartTranscriptPanel';
 import type { ConversationComponentProps } from '@/types/conversation';
 
 // Cap the displayed issues list to avoid overwhelming the UI during a cascade of errors.
@@ -100,7 +97,8 @@ export default function ConversationComponent({
   const remoteUsers = useRemoteUsers();
   const [isEnabled, setIsEnabled] = useState(true);
   const [isAgentConnected, setIsAgentConnected] = useState(false);
-  const [isConnectionDetailsOpen, setIsConnectionDetailsOpen] = useState(false);
+  // True once the agent has been missing from the channel for a while (drives the plain-words warning).
+  const [agentSlow, setAgentSlow] = useState(false);
 
   // Tracks granular RTC connection state for the status dot.
   // Agora states: DISCONNECTED | CONNECTING | CONNECTED | DISCONNECTING | RECONNECTING
@@ -130,13 +128,6 @@ export default function ConversationComponent({
       return [issue, ...prev].slice(0, MAX_CONNECTION_ISSUES);
     });
   }, []);
-
-  // Auto-open details panel as soon as a new issue is recorded.
-  useEffect(() => {
-    if (connectionIssues.length > 0) {
-      setIsConnectionDetailsOpen(true);
-    }
-  }, [connectionIssues.length]);
 
   // StrictMode guard: delay `useJoin`'s ready flag until after the fake-unmount
   // cycle completes. React StrictMode fires cleanup synchronously before any
@@ -468,61 +459,66 @@ export default function ConversationComponent({
     onEndConversation();
   }, [onEndConversation]);
 
+  // Agent not in the channel after 12 s -> say so plainly instead of hanging on a spinner.
+  useEffect(() => {
+    if (isAgentConnected) {
+      setAgentSlow(false);
+      return;
+    }
+    const timer = setTimeout(() => setAgentSlow(true), 12000);
+    return () => clearTimeout(timer);
+  }, [isAgentConnected]);
+
+  const orbState = useMemo<OrbState>(() => {
+    switch (visualizerState) {
+      case 'disconnected':
+        return 'disconnected';
+      case 'joining':
+        return 'joining';
+      case 'not-joined':
+        return 'not-joined';
+      case 'analyzing':
+        return 'thinking';
+      case 'talking':
+        return 'speaking';
+      default:
+        return isEnabled ? 'listening' : 'muted';
+    }
+  }, [visualizerState, isEnabled]);
+
+  // Real error text when we have it: latest agent/RTM issue, else a plain "not joined" message.
+  const problem = useMemo(() => {
+    const latest = connectionIssues[0]; // issues are prepended, newest first
+    if (connectionSeverity === 'error' && latest) {
+      return { text: `${latest.source.toUpperCase()}: ${latest.message}`, onRetry: handleEndConversation };
+    }
+    if (agentSlow && !isAgentConnected) {
+      return {
+        text: 'The voice agent has not joined the call yet. Tap Retry to start again.',
+        onRetry: handleEndConversation,
+      };
+    }
+    return null;
+  }, [connectionIssues, connectionSeverity, agentSlow, isAgentConnected, handleEndConversation]);
+
   return (
-    <QuickstartConversationLayout
-      statusPanel={
-        <ConnectionStatusPanel
-          connectionState={connectionState}
-          connectionSeverity={connectionSeverity}
-          connectionIssues={connectionIssues}
-          isOpen={isConnectionDetailsOpen}
-          onToggle={() => setIsConnectionDetailsOpen((open) => !open)}
-        />
-      }
-      pipelineMetrics={<QuickstartPipelineMetrics metrics={agentMetrics} />}
-      transcriptPanel={
-        <QuickstartTranscriptPanel
-          messageList={messageList}
-          currentInProgressMessage={currentInProgressMessage}
-          agentUID={agentUID}
-        />
-      }
-      visualizer={
-        <div
-          className="relative flex h-full min-h-[20rem] w-full max-w-4xl items-center justify-center"
-          role="region"
-          aria-label="AI agent status visualization"
-        >
-          <AgentVisualizer state={visualizerState} size="lg" />
-          {remoteUsers.map((user) => (
-            <div key={user.uid} className="hidden">
-              <RemoteUser user={user} />
-            </div>
-          ))}
+    <>
+      <VoiceScreen
+        orbState={orbState}
+        messageList={messageList}
+        currentInProgressMessage={currentInProgressMessage}
+        agentUID={agentUID}
+        onToggleMic={handleMicToggle}
+        onEnd={handleEndConversation}
+        micSelector={<MicrophoneSelector localMicrophoneTrack={localMicrophoneTrack} />}
+        problem={problem}
+      />
+      {/* RemoteUser plays the agent's audio. It must stay mounted, but it is invisible. */}
+      {remoteUsers.map((user) => (
+        <div key={user.uid} className="hidden">
+          <RemoteUser user={user} />
         </div>
-      }
-      controls={
-        <div
-          className="mx-auto flex w-fit items-center gap-3 rounded-full border border-border bg-card/80 px-4 py-2 backdrop-blur-md"
-          role="group"
-          aria-label="Audio controls"
-        >
-          <div className="conversation-mic-host flex items-center justify-center">
-            <MicButtonWithVisualizer
-              isEnabled={isEnabled}
-              setIsEnabled={setIsEnabled}
-              track={localMicrophoneTrack}
-              onToggle={handleMicToggle}
-              className="overflow-visible"
-              aria-label={isEnabled ? 'Mute microphone' : 'Unmute microphone'}
-              enabledColor="hsl(var(--primary))"
-              disabledColor="hsl(var(--destructive))"
-            />
-          </div>
-          <MicrophoneSelector localMicrophoneTrack={localMicrophoneTrack} />
-        </div>
-      }
-      onEndConversation={handleEndConversation}
-    />
+      ))}
+    </>
   );
 }
