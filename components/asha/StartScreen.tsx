@@ -8,6 +8,7 @@ import { LANGUAGES, LANGUAGE_ORDER, type LangCode } from '@/lib/languages';
 import { HELLO } from '@/lib/i18n';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
 import { ConnectingGreetings } from './ConnectingGreetings';
+import { GoodToKnow } from './RecordGuide';
 import { cn } from '@/lib/utils';
 
 type StartScreenProps = {
@@ -83,6 +84,7 @@ export function StartScreen({ isLoading, error, onStart, language, onLanguageCha
       <div className="min-h-12 max-w-[20rem] text-sm text-asha-red" role={error ? 'alert' : undefined}>
         {error}
       </div>
+      <GoodToKnow s={s} className="w-full max-w-sm" />
     </div>
   );
 }

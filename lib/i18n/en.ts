@@ -142,6 +142,19 @@ export const en = {
   testModeNote: 'Test mode: no real message was sent. Set NOTIFIER in the server settings.',
   sendError: 'Could not send. Try again.',
   captionsStalled: 'Live captions are not showing. The call is still working. Tap Retry to reload them.',
+  canRecordT: 'What I can record',
+  youCanSay: 'You can say:',
+  chipBp: 'Blood pressure',
+  chipHb: 'Hb (blood level)',
+  chipWeeks: 'Weeks of pregnancy',
+  chipSymptoms: 'Symptoms',
+  example: 'Sunita Devi\'s house, seven months, BP 150 by 100, Hb 9, swelling in the feet.',
+  notRecorded: 'not recorded',
+  noneMentioned: 'none mentioned',
+  recordedIn: (n: number) => `Recorded in ${n} s`,
+  recordedInHelp: 'from your first words to the saved visit',
+  goodToKnow: 'What Saathi cannot do',
+  cant: ['It does not diagnose.', 'It does not suggest medicines or doses.', 'It cannot change a saved visit yet.', 'It cannot add new mothers yet.', 'It is not connected to government systems: the data here is a demo.', 'It covers pregnancy visits only for now.'],
 };
 
 export type Strings = typeof en;
