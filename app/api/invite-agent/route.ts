@@ -17,6 +17,20 @@ export const maxDuration = 60;
 // Agora-managed LLMs (no vendor key needed): https://docs.agora.io/en/ai/build/managed-mode.md
 const MANAGED_LLMS = ['gpt-4o-mini', 'gpt-4.1-mini', 'gpt-5-nano', 'gpt-5-mini'] as const;
 
+/**
+ * Per-family generation settings. Reasoning models (gpt-5 and later, o-series) reject `temperature` and `max_tokens`, and their
+ * token cap also counts hidden reasoning tokens, so it must be generous or the spoken reply comes back empty. They take
+ * `max_completion_tokens` and `reasoning_effort` instead (passed through `params`). Classic models (gpt-4o-mini, gpt-4.1-mini)
+ * take `temperature` and `max_tokens`. The cap is a safety net, not a length control: brevity comes from the prompt, and Hindi,
+ * Tamil, Malayalam and other scripts use several times more tokens per word than English.
+ */
+const REASONING_MODEL = /^(gpt-[5-9]|o\d)/;
+function llmTuning(model: string) {
+  return REASONING_MODEL.test(model)
+    ? { params: { max_completion_tokens: 1200, reasoning_effort: 'low' } }
+    : { temperature: 0.2, maxTokens: 700 };
+}
+
 const Body = z.object({
   requester_id: z.string().min(1).max(40),
   channel_name: z.string().min(1).max(120),
@@ -90,9 +104,7 @@ export async function POST(request: NextRequest) {
       .withLlm(
         new OpenAI({
           model: llmModel,
-          // Low randomness and short replies: fewer invented details, no long monologues. (gpt-5 models only accept the default temperature.)
-          maxTokens: 220,
-          ...(llmModel.startsWith('gpt-5') ? {} : { temperature: 0.2 }),
+          ...llmTuning(llmModel),
           greetingMessage: lang.greeting,
           failureMessage: lang.failure,
           maxHistory: 16,
