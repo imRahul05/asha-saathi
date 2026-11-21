@@ -2,6 +2,7 @@
 //   pnpm verify:mcp <base-url> <secret>            read-only: auth, tool list, name lookup
 //   pnpm verify:mcp <base-url> <secret> --write    also runs a real visit: record, draft alert, send twice (creates data!)
 // Example: pnpm verify:mcp https://asha-saathi-mocha.vercel.app $MCP_SHARED_SECRET
+export {};
 const [base, secret] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const write = process.argv.includes('--write');
 if (!base || !secret) {

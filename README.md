@@ -120,6 +120,19 @@ pnpm verify:mcp https://<your-app> $MCP_SHARED_SECRET           # read-only chec
 pnpm verify:mcp https://<your-app> $MCP_SHARED_SECRET --write   # also records a visit and sends one alert (creates data)
 ```
 
+## Before you go on stage
+
+```bash
+pnpm demo:warmup [https://your-app]   # 3 light GETs (/, /login, /api/session/state expecting 401); flags a wrong status or anything over 3 s
+pnpm demo:reset                       # dry run: prints what would be deleted, plus agent-start headroom
+pnpm demo:reset --yes                 # deletes demo ASHAs older than 2 h, events older than 2 h, agent_starts older than 1 day
+pnpm demo:reset --yes --force         # same, even if an agent started in the last 5 minutes
+```
+
+- `demo:warmup` defaults to `BASE_URL`, then `PUBLIC_BASE_URL`, then the production URL. It never signs in and never starts an agent, so it costs no Agora minutes.
+- `demo:reset` uses `DATABASE_URL_DIRECT` or `DATABASE_URL` from `.env.local`. It never deletes the non-demo seed ASHA or her mothers and never touches `kb_chunks`. Deleting a demo ASHA cascades to her mothers, visits, alerts and follow-ups; her events (no foreign key) are deleted with her. `--yes` refuses to run if an agent started in the last 5 minutes (someone may be mid-call) unless `--force`.
+- It prints counts before and after, the agent starts in the last hour, and the daily limit (`AGENT_STARTS_PER_DAY`, default 80) with the starts left. The logic lives in `lib/demo-reset.ts` and is tested against embedded Postgres.
+
 ## Repo map
 
 | Path | What it is |
