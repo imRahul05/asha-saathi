@@ -120,6 +120,7 @@ export const kn: Strings = {
   daysLater: (n) => `${n} ದಿನಗಳ ನಂತರ`,
   remainingT: 'ಇಂದಿನ ಉಳಿದ ಭೇಟಿಗಳು',
   callDoctor: (d) => `${d} ಜೊತೆ ಮಾತನಾಡಿ`,
+  doctorJoined: (d) => `${d} ಕರೆಗೆ ಸೇರಿದ್ದಾರೆ`,
   callFailed: 'ಕರೆ ಲಿಂಕ್ ಸಿದ್ಧವಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.',
   statVisits: 'ಇಂದಿನ ಭೇಟಿಗಳು',
   statAlerts: 'ಕಳುಹಿಸಿದ ಎಚ್ಚರಿಕೆಗಳು',

@@ -120,6 +120,7 @@ export const hi: Strings = {
   daysLater: (n) => `${n} दिन बाद`,
   remainingT: 'आज की बाकी विज़िट',
   callDoctor: (d) => `${d} से बात करें`,
+  doctorJoined: (d) => `${d} कॉल में शामिल हुए`,
   callFailed: 'कॉल लिंक नहीं बना। फिर कोशिश करें।',
   statVisits: 'आज की विज़िट',
   statAlerts: 'भेजे गए अलर्ट',

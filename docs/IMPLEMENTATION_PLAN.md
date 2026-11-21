@@ -23,6 +23,7 @@
 | 6-7 Harden, rehearse | Partly: safety rules, usage guard, session handling, caption watchdog done. `amendLastVisit` done. Still open: reset/warm-up scripts, full phone rehearsal, backup video, pitch script. |
 | Extra: recording guide | Done: "What I can record" hints and example, a checklist of what was picked up (BP, Hb, weeks, symptoms; missing items highlighted), time from first words to saved visit, and a collapsed list of what Saathi cannot do, in all nine languages. |
 | Extra: languages | Done (PR 4): per-call picker, 9 languages + Auto (beta). Live-tested English, Tamil, Gujarati, Malayalam; Hindi and Kannada earlier. |
+| Extra: doctor call tracking | Done: `POST /api/call/event` logs doctor/ASHA joined and left as `doctorCall` events; the timeline shows them and the alert bar says "Dr. X joined the call". |
 | Extra: doctor voice call | Done: signed link in the alert, browser audio call over Agora RTC (`/call/[t]`), ASHA "call doctor" button. Tested with two browsers on prod. |
 
 ### Still open (as of 20 Nov 2026)
@@ -34,7 +35,7 @@
 | ~~`amendLastVisit`~~ | Done: corrects the visit saved in the current call, re-runs the rules, never resends a sent alert. |
 | Real accounts (Neon Auth) | Only one-click demo sign-in exists. |
 | Dashboard call transcript | Not built. |
-| Doctor call extras | No AI transcript or summary of the doctor call; no record on the dashboard that a call happened; links cannot be revoked (they expire after 6 hours); the SMS fallback text has no link (too long). |
+| Doctor call extras | No AI transcript or summary of the doctor call; links cannot be revoked (they expire after 6 hours); the SMS fallback text has no link (too long). |
 | Language review | Greetings and word lists are machine-written and need a native speaker. Telugu, Bengali and Marathi untested. Marathi and Malayalam use stand-in Agora turn-detection tags. |
 | Notifications | WhatsApp sandbox needs `join` and a 24-hour window; production needs an approved WhatsApp sender. |
 | Pitch and rehearsal (phases 6-7) | Demo is Saturday 21 Nov. |

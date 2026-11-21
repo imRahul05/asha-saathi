@@ -55,19 +55,39 @@ export function CallRoom({ link }: { link: string }) {
     return () => clearInterval(id);
   }, [phase]);
 
+  // Tell the server a join/leave happened so the visit timeline shows the call. Best effort: never blocks or breaks the call.
+  const reported = useRef<'joined' | 'left' | null>(null);
+  const report = useCallback((type: 'joined' | 'left') => {
+    try {
+      if (reported.current === type) return;
+      reported.current = type;
+      const body = JSON.stringify({ t: link, type });
+      if (typeof navigator !== 'undefined' && navigator.sendBeacon?.('/api/call/event', body)) return;
+      void fetch('/api/call/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+    } catch { /* ignore */ }
+  }, [link]);
+
   const leave = useCallback(async () => {
+    report('left');
     try { mic.current?.stop(); mic.current?.close(); } catch { /* already closed */ }
     mic.current = null;
     try { await client.current?.leave(); } catch { /* already left */ }
     client.current = null;
     setRemote(false); setHeard(false);
     setPhase('ended');
-  }, []);
+  }, [report]);
+
+  useEffect(() => { // a closed tab or navigation does not run effect cleanups reliably, so report from pagehide too
+    const onHide = () => { if (client.current) report('left'); };
+    window.addEventListener('pagehide', onHide);
+    return () => window.removeEventListener('pagehide', onHide);
+  }, [report]);
 
   useEffect(() => () => { // leave when the page is closed
+    if (client.current) report('left');
     try { mic.current?.close(); } catch { /* ignore */ }
     client.current?.leave().catch(() => {});
-  }, []);
+  }, [report]);
 
   const join = async () => {
     if (!info) return;
@@ -95,6 +115,7 @@ export function CallRoom({ link }: { link: string }) {
         return;
       }
       await c.publish(mic.current);
+      reported.current = null; report('joined');
       setSeconds(0); setPhase('live');
     } catch (e) {
       console.error('[call] join failed', e);

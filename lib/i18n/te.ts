@@ -120,6 +120,7 @@ export const te: Strings = {
   daysLater: (n) => `${n} రోజుల తర్వాత`,
   remainingT: 'ఈరోజు మిగిలిన సందర్శనలు',
   callDoctor: (d) => `${d}తో మాట్లాడండి`,
+  doctorJoined: (d) => `${d} కాల్‌లో చేరారు`,
   callFailed: 'కాల్ లింక్ తయారవలేదు. మళ్లీ ప్రయత్నించండి.',
   statVisits: 'ఈరోజు సందర్శనలు',
   statAlerts: 'పంపిన అలర్ట్‌లు',

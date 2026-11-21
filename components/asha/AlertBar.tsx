@@ -87,6 +87,7 @@ export function AlertBar({ visit, s }: { visit: SnapshotVisit; s: Strings }) {
           </button>
         )}
       </div>
+      {visit.call?.doctorJoinedAt && <p className="mt-2 text-sm font-bold">{s.doctorJoined(doctor)}</p>}
       {testMode && <p className="mt-2 text-sm font-medium">{s.testModeNote}</p>}
       {failed && alert.error && <p className="mt-2 break-words text-sm font-medium">{alert.error}</p>}
       {err && (
