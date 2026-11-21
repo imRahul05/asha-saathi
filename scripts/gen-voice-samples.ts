@@ -16,8 +16,8 @@ const force = process.argv.includes('--force');
   for (const code of LANGUAGE_ORDER) {
     if (code === 'auto') continue; // Auto uses the Hindi list and the Hindi samples
     const lang = LANGUAGES[code];
-    // Just the opening hello of the real greeting, e.g. "வணக்கம் அக்கா!"
-    const text = lang.greeting.split(/(?<=[!।.?])\s/)[0] ?? lang.greeting;
+    // Just the opening hello of the real greeting (hello + address word), e.g. "வணக்கம் அக்கா!"
+    const text = `${lang.helloLabel}!`;
     for (const voice of VOICES[code]) {
       const file = `${OUT}/${code}-${voice.id}.mp3`;
       if (!force && existsSync(file)) { skipped++; continue; }

@@ -1,4 +1,4 @@
-import type { LangCode } from '@/lib/languages';
+import { LANGUAGES, type LangCode } from '@/lib/languages';
 import { en, type Strings } from './en';
 import { hi } from './hi';
 import { kn } from './kn';
@@ -25,18 +25,10 @@ export function stringsFor(code: string | null | undefined, fallback: UiLang = '
   return STRINGS[isUiLang(code) ? code : fallback];
 }
 
-/** A short hello in each language, for the language grid and the connecting animation. */
-export const HELLO: Record<UiLang, string> = {
-  hi: 'नमस्ते दीदी',
-  en: 'Hello sister',
-  kn: 'ನಮಸ್ಕಾರ ಅಕ್ಕ',
-  ta: 'வணக்கம் அக்கா',
-  te: 'నమస్కారం అక్కా',
-  gu: 'નમસ્તે બહેન',
-  bn: 'নমস্কার দিদি',
-  mr: 'नमस्कार ताई',
-  ml: 'നമസ്കാരം ചേച്ചി',
-};
+/** A short hello in each language, for the language grid and the connecting animation. Built from lib/languages.ts, so it always matches the spoken greeting. */
+export const HELLO = Object.fromEntries(
+  (Object.keys(STRINGS) as UiLang[]).map((code) => [code, LANGUAGES[code].helloLabel]),
+) as Record<UiLang, string>;
 
 // Script ranges. Devanagari is shared by Hindi and Marathi: text alone cannot tell them apart, so it maps to Hindi.
 const SCRIPTS: Array<[UiLang, RegExp]> = [

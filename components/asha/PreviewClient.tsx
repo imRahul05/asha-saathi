@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { VoiceScreen, type TranscriptMessage } from '@/components/asha/VoiceScreen';
 import { DEV_SNAPSHOT } from '@/lib/asha/fixtures';
 import type { OrbState } from '@/lib/asha/lang';
+import { LANGUAGES } from '@/lib/languages';
 
 // DEV ONLY design preview with sample data. Not reachable in production (see app/preview/page.tsx).
 const STATES: OrbState[] = ['joining', 'not-joined', 'listening', 'thinking', 'speaking', 'muted', 'disconnected'];
@@ -18,7 +19,7 @@ const KANNADA: TranscriptMessage[] = [
   { uid: 2, turn_id: 2, text: 'ಸುನೀತಾ ಅವರ ಮನೆಗೆ ಹೋಗಿದ್ದೆ, ಏಳು ತಿಂಗಳು, BP 150 by 100, ಕಾಲು ಊದಿಕೊಂಡಿದೆ.' },
 ];
 const ENGLISH: TranscriptMessage[] = [
-  { uid: 1, turn_id: 1, text: 'Hello sister! Whose home did you visit?' },
+  { uid: 1, turn_id: 1, text: LANGUAGES.en.greeting },
   { uid: 2, turn_id: 2, text: 'I visited Sunita ji, seven months, BP 150 by 100, swelling in the feet.' },
 ];
 const SETS = { hi: HINDI, kn: KANNADA, en: ENGLISH, empty: [] as TranscriptMessage[] };
