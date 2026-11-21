@@ -24,6 +24,7 @@ export function describeEvent(e: Pick<EventRow, 'name' | 'ok' | 'input' | 'outpu
       const ps = Array.isArray(out.passages) ? (out.passages as Array<{ source?: string; page?: string }>) : [];
       return ps.length ? `source: ${ps[0].source ?? ''}, p.${ps[0].page ?? ''}` : 'no guideline found, referred to MO';
     }
+    case 'holdAlert': return out.held ? 'automatic alert stopped' : 'already sent';
     case 'doctorCall': return `${inp.role === 'doctor' ? 'doctor' : 'ASHA'} ${inp.event === 'left' ? 'left' : 'joined'}`;
     case 'getBeneficiaryHistory': return `${Array.isArray(out.visits) ? out.visits.length : 0} earlier visits`;
     default: return '';
@@ -42,6 +43,9 @@ async function toSnapshotVisit(db: Db, v: Visit, ashaName: { doctor: string | nu
         [v.ashaId, v.sessionId],
       )
     : [];
+  const held = v.sessionId
+    ? await db.query<Row>(`select 1 as x from events where asha_id = $1 and session_id = $2 and name = 'holdAlert' and ok and created_at >= $3::timestamptz limit 1`, [v.ashaId, v.sessionId, v.visitedAt])
+    : [];
   const iso = (d: unknown) => (d instanceof Date ? d.toISOString() : String(d));
   const doctorJoin = calls.find((c) => (c.input as Record<string, unknown> | null)?.role === 'doctor' && (c.input as Record<string, unknown>).event === 'joined');
   const call = { doctorJoinedAt: doctorJoin ? iso(doctorJoin.created_at) : null, lastEventAt: calls.length ? iso(calls[calls.length - 1].created_at) : null };
@@ -55,6 +59,8 @@ async function toSnapshotVisit(db: Db, v: Visit, ashaName: { doctor: string | nu
       age: b?.age == null ? null : Number(b.age), firstPregnancy: parity == null ? null : parity === 0,
     },
     call,
+    alertHeld: held.length > 0,
+    doctor: ashaName?.doctor ?? null,
     vitals: { bpSys: v.bpSys, bpDia: v.bpDia, hb: v.hb, symptoms: v.symptoms },
     risk: {
       level: v.riskLevel,

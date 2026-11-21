@@ -93,6 +93,12 @@ From `types/conversation.ts` (high-use):
 
 - `401 SESSION_EXPIRED` (token and agent routes): the signed-in account no longer exists. `401 SIGN_IN_REQUIRED`: no valid cookie. Both send the user to `/login?expired=1`.
 
+## Automatic alert with a countdown (HIGH and URGENT)
+
+- After a HIGH or URGENT visit is saved the screen (`AlertBar`) counts down 10 s with Cancel and Send now, then calls `POST /api/alerts/send` (draft + send, once-only). The agent does NOT draft or send for these visits; it tells her the doctor will be alerted in 10 seconds unless she says stop or taps Cancel.
+- Stop: the agent calls tool `holdAlert` (no input; works on the latest visit of the call; expires any unsent draft; refuses with `already_sent` if sent), or the Cancel tap calls `POST /api/alerts/hold {visitId}` (same tool). The snapshot visit carries `alertHeld` and `doctor` (the doctor's name before any alert exists).
+- A spoken yes or send now, or her own request for an alert (any risk level), still uses `draftAlert` then `sendAlert`. Watch and normal visits are never auto-sent.
+
 ## Faster visit save and typed messages
 
 - `recordVisit` takes either `beneficiaryId` or the mother's `name` (and optional `village`), so a spoken visit report is saved in ONE tool call (no `findBeneficiary` first). Several matches: error `AMBIGUOUS` with the candidates in the hint; none: `NOT_FOUND`; nothing is saved in either case. Measured live: first sound of the reply 4.7 s after she stops speaking (was 6.8 s).

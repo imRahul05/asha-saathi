@@ -15,6 +15,10 @@ export type SnapshotVisit = {
   alert: null | { status: 'draft' | 'sent' | 'failed'; channel: string | null; doctor: string | null; phc: string | null; message: string; sentAt: string | null; error: string | null };
   /** Doctor call activity for this visit's session, from `doctorCall` events. Both null when no call happened. */
   call: { doctorJoinedAt: string | null; lastEventAt: string | null };
+  /** The ASHA stopped the automatic alert (by voice or by tapping Cancel) */
+  alertHeld: boolean;
+  /** The doctor's name on file, shown before any alert exists (for the countdown) */
+  doctor: string | null;
   followUp: null | { dueDate: string; reason: string | null };
 };
 
