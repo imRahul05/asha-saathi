@@ -28,6 +28,8 @@ export function AlertBar({ visit, s }: { visit: SnapshotVisit; s: Strings }) {
   const draft = alert.status === 'draft';
   const failed = alert.status === 'failed';
   const testMode = alert.status === 'sent' && alert.channel === 'console';
+  // The doctor's call link is added to the message only for HIGH and URGENT visits (see lib/alerts/message.ts), so only then is there a doctor to talk to.
+  const canCall = visit.risk.level === 'high' || visit.risk.level === 'urgent';
   const doctor = alert.doctor ?? 'Doctor';
 
   async function sendNow() {
@@ -80,7 +82,7 @@ export function AlertBar({ visit, s }: { visit: SnapshotVisit; s: Strings }) {
             {sending ? s.sendingNow : failed ? s.tryAgain : s.sendNow}
           </button>
         )}
-        {alert.status === 'sent' && (
+        {alert.status === 'sent' && canCall && (
           <button type="button" onClick={talk} disabled={calling} className={cn(actionClass, 'bg-asha-teal text-white focus-visible:ring-asha-teal/40')}>
             {calling ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Phone className="h-4 w-4" aria-hidden />}
             {s.callDoctor(doctor)}
