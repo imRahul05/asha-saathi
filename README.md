@@ -78,6 +78,15 @@ pnpm kb:check                       # retrieval regression: right passage found,
 
 See [knowledge/README.md](knowledge/README.md) for the quote rules and the update steps (also available as the `kb-update` skill).
 
+## Local testing
+
+Sign-in, the screens and the tests work on `localhost`. The **voice agent does not**: Agora's cloud calls your tool server over the internet and rejects `localhost` ("URL host localhost is blocked"). To test a call from your machine set `PUBLIC_BASE_URL` in `.env.local` to either:
+
+- your deployed site, e.g. `https://asha-saathi-mocha.vercel.app`. Tool calls then run on that deployment, so your local `MCP_SHARED_SECRET` and `DATABASE_URL` must match its values; or
+- a tunnel to your local server (`cloudflared tunnel --url http://localhost:3000` or `ngrok http 3000`), which also tests your local tool code.
+
+Restart `pnpm dev` after changing it. The app shows this advice instead of the raw Agora error.
+
 ## Doctor call
 
 For HIGH and URGENT visits the alert message carries a signed link (`/call/<token>`, valid 6 hours). The doctor taps it and joins a browser voice call with the ASHA over Agora RTC: no app, no account, audio only. The page shows the visit summary beside the call. The ASHA opens the same call from the "call doctor" button on the result card. Needs `PUBLIC_BASE_URL` set so the link is absolute.

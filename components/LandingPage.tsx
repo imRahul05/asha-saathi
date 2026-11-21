@@ -124,7 +124,12 @@ export default function LandingPage() {
             }
             if (!res.ok) {
               const body = await res.text().catch(() => '');
-              setAgentJoinError(`Agent start failed (HTTP ${res.status}). ${body.slice(0, 240)}`);
+              let friendly: string | null = null;
+              try {
+                const parsedBody = JSON.parse(body) as { error?: string; message?: string };
+                if (parsedBody.error === 'LOCAL_URL_NOT_REACHABLE') friendly = parsedBody.message ?? null;
+              } catch { /* not JSON: show the raw text below */ }
+              setAgentJoinError(friendly ?? `Agent start failed (HTTP ${res.status}). ${body.slice(0, 240)}`);
               return null;
             }
             return res.json() as Promise<AgentResponse>;
