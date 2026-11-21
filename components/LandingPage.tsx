@@ -15,6 +15,7 @@ import { StartScreen } from './asha/StartScreen';
 import { DEFAULT_LANGUAGE, type LangCode } from '@/lib/languages';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
 import { defaultVoice, resolveVoice } from '@/lib/voices';
+import { startRtmBuffer, type RtmBuffer } from '@/lib/rtm-buffer';
 import { useVoicePreview } from '@/hooks/use-voice-preview';
 
 // Dynamically import the ConversationComponent with ssr disabled
@@ -70,6 +71,8 @@ export default function LandingPage() {
   const [error, setError] = useState<string | null>(null);
   const [agoraData, setAgoraData] = useState<AgoraTokenData | null>(null);
   const [rtmClient, setRtmClient] = useState<RTMClient | null>(null);
+  // Every RTM message since login, so the caption reader can catch up on anything sent before it started listening.
+  const rtmBufferRef = useRef<RtmBuffer | null>(null);
   // Real reason the agent could not start (HTTP status + body), shown on screen instead of a vague banner.
   const [agentJoinError, setAgentJoinError] = useState<string | null>(null);
   // The language choice is shared with the whole site (and remembered in this browser). The call uses it and keeps it fixed until the call ends.
@@ -187,6 +190,8 @@ export default function LandingPage() {
             process.env.NEXT_PUBLIC_AGORA_APP_ID!,
             responseData.uid,
           );
+          rtmBufferRef.current?.stop();
+          rtmBufferRef.current = startRtmBuffer(rtm); // listen from before login, so nothing the agent says is lost
           await rtm.login({ token: responseData.token });
           await rtm.subscribe(responseData.channel);
           // console.log('RTM ready, channel:', responseData.channel);
@@ -277,6 +282,8 @@ export default function LandingPage() {
     }
 
     // Tear down RTM — owned here since we created it here
+    rtmBufferRef.current?.stop();
+    rtmBufferRef.current = null;
     rtmClient?.logout().catch((err) => console.error('RTM logout error:', err));
     setRtmClient(null);
     setShowConversation(false);
@@ -307,6 +314,7 @@ export default function LandingPage() {
                   onTokenWillExpire={handleTokenWillExpire}
                   onEndConversation={handleEndConversation}
                   onRestart={handleRestart}
+                  rtmBuffer={rtmBufferRef.current}
                   canAutoRetry={() => autoRetriesLeft.current > 0}
                   callLanguage={callLanguage}
                 />

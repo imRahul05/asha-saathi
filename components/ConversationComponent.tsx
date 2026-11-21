@@ -40,6 +40,7 @@ import { VoiceScreen } from './asha/VoiceScreen';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
 import { stringsFor } from '@/lib/i18n';
 import { activeBlockingIssue, classifyIssue } from '@/lib/call-errors';
+import { replayBufferedMessages } from '@/lib/rtm-buffer';
 import { useSnapshot } from '@/hooks/use-snapshot';
 import type { OrbState } from '@/lib/asha/lang';
 import { type QuickstartAgentMetric } from './QuickstartPipelineMetrics';
@@ -97,6 +98,7 @@ export default function ConversationComponent({
   onEndConversation,
   onRestart,
   canAutoRetry,
+  rtmBuffer,
   callLanguage,
 }: ConversationComponentProps) {
   const client = useRTCClient();
@@ -285,6 +287,9 @@ export default function ConversationComponent({
         });
         // subscribeMessage binds the toolkit to both RTC stream messages and RTM payloads.
         ai.subscribeMessage(agoraData.channel);
+        // Catch up: anything Saathi said before this point (her greeting, usually) was sent while nobody was listening.
+        const replayed = replayBufferedMessages(ai, rtmBuffer?.events);
+        console.info(`[captions] caught up on ${replayed} earlier message(s)`);
       } catch (error) {
         if (!cancelled) {
           console.error('[AgoraVoiceAI] init failed:', error);
