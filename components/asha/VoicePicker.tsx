@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Volume2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { VoiceOption } from '@/lib/voices';
 import type { Strings } from '@/lib/i18n';
@@ -55,9 +55,6 @@ export function VoicePicker({
 
   return (
     <div className="w-full max-w-sm">
-      <p className="mb-2 flex items-center justify-center gap-1.5 text-sm font-semibold text-asha-muted">
-        <Volume2 className={cn('h-4 w-4', playingId && 'text-asha-teal')} aria-hidden /> {s.voiceLabel}
-      </p>
       <div className="flex items-center gap-1">
         <button type="button" onClick={() => step(-1)} disabled={disabled || index === 0} aria-label={s.voicePrev}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-asha-muted hover:bg-asha-sand disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-asha-teal">
