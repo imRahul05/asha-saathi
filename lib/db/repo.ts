@@ -1,4 +1,5 @@
 import type { Db } from './client';
+import { dateColumnToIso } from '@/lib/dates';
 import { RiskReason, type RiskLevel, type Risk } from '@/lib/schemas';
 import { z } from 'zod';
 
@@ -28,7 +29,7 @@ export type EventRow = {
 
 type Row = Record<string, unknown>;
 const iso = (v: unknown) => (v instanceof Date ? v.toISOString() : v == null ? null : String(v));
-const dateOnly = (v: unknown) => (v instanceof Date ? v.toISOString().slice(0, 10) : v == null ? null : String(v).slice(0, 10));
+const dateOnly = dateColumnToIso;
 const num = (v: unknown) => (v == null ? null : Number(v));
 
 // ---------- row mappers ----------
