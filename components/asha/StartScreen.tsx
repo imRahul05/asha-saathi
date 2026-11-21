@@ -21,10 +21,12 @@ type StartScreenProps = {
   onLanguageChange: (code: LangCode) => void;
   voice: string;
   onVoiceChange: (id: string) => void;
+  /** id of the voice whose sample is playing right now, if any */
+  playingVoice?: string | null;
 };
 
 // Pre-call screen: one big tap target. The whole screen is written in the language the person picked.
-export function StartScreen({ isLoading, error, onStart, language, onLanguageChange, voice, onVoiceChange }: StartScreenProps) {
+export function StartScreen({ isLoading, error, onStart, language, onLanguageChange, voice, onVoiceChange, playingVoice }: StartScreenProps) {
   const { s, uiLang } = useLanguage();
   const router = useRouter();
   async function signOut() {
@@ -76,7 +78,7 @@ export function StartScreen({ isLoading, error, onStart, language, onLanguageCha
         )}
       </div>
 
-      <VoicePicker voices={VOICES[language]} value={voice} onChange={onVoiceChange} disabled={isLoading} s={s} />
+      <VoicePicker voices={VOICES[language]} value={voice} onChange={onVoiceChange} disabled={isLoading} s={s} playingId={playingVoice} />
 
       <Orb
         state={isLoading ? 'joining' : 'listening'}

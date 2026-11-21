@@ -9,8 +9,8 @@ import type { Strings } from '@/lib/i18n';
 // A row of voice cards you can swipe (or scroll, or use the arrows or arrow keys on). The card nearest the centre is the chosen voice,
 // and tapping a card chooses it too. Plain scroll-snap, so it feels native on a phone.
 export function VoicePicker({
-  voices, value, onChange, disabled, s,
-}: { voices: VoiceOption[]; value: string; onChange: (id: string) => void; disabled?: boolean; s: Strings }) {
+  voices, value, onChange, disabled, s, playingId,
+}: { voices: VoiceOption[]; value: string; onChange: (id: string) => void; disabled?: boolean; s: Strings; playingId?: string | null }) {
   const track = useRef<HTMLDivElement>(null);
   const cards = useRef<Array<HTMLButtonElement | null>>([]);
   const settle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -56,7 +56,7 @@ export function VoicePicker({
   return (
     <div className="w-full max-w-sm">
       <p className="mb-2 flex items-center justify-center gap-1.5 text-sm font-semibold text-asha-muted">
-        <Volume2 className="h-4 w-4" aria-hidden /> {s.voiceLabel}
+        <Volume2 className={cn('h-4 w-4', playingId && 'text-asha-teal')} aria-hidden /> {s.voiceLabel}
       </p>
       <div className="flex items-center gap-1">
         <button type="button" onClick={() => step(-1)} disabled={disabled || index === 0} aria-label={s.voicePrev}
@@ -90,7 +90,15 @@ export function VoicePicker({
                 )}
               >
                 <span className="text-lg font-bold leading-6">{x.name}</span>
-                <span className={cn('text-xs font-medium', on ? 'text-white/85' : 'text-asha-muted')}>{x.gender === 'female' ? s.voiceFemale : s.voiceMale}</span>
+                {playingId === x.id ? (
+                  <span className="wave-speak flex h-4 items-center gap-[3px]" aria-hidden>
+                    {[0.5, 1, 0.7, 0.95, 0.6, 0.85, 0.45].map((h, k) => (
+                      <span key={k} className="wave-bar w-[3px] rounded-full bg-white" style={{ height: `${h * 100}%`, animationDelay: `${k * 80}ms` }} />
+                    ))}
+                  </span>
+                ) : (
+                  <span className={cn('text-xs font-medium', on ? 'text-white/85' : 'text-asha-muted')}>{x.gender === 'female' ? s.voiceFemale : s.voiceMale}</span>
+                )}
               </button>
             );
           })}

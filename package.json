@@ -20,6 +20,7 @@
     "verify:mcp": "node --import tsx scripts/verify-mcp.ts",
     "kb:ingest": "node --import tsx scripts/kb-ingest.ts",
     "kb:check": "node --import tsx scripts/kb-check.ts",
+    "voice:samples": "node --env-file=.env.local --import tsx scripts/gen-voice-samples.ts",
     "kb:verify": "node --import tsx scripts/kb-verify.ts",
     "setup:local": "node --import tsx scripts/setup-local.ts",
     "alerts:test": "node --env-file=.env.local --import tsx scripts/send-test-alert.ts",
