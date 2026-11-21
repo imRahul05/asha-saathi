@@ -78,6 +78,10 @@ pnpm kb:check                       # retrieval regression: right passage found,
 
 See [knowledge/README.md](knowledge/README.md) for the quote rules and the update steps (also available as the `kb-update` skill).
 
+## Voices
+
+The start screen has a swipeable voice picker (cards you can swipe, tap, or step with the arrows). Each language lists its Murf Falcon voices in `lib/voices.ts`. "Pooja" (multilingual) is the default for Hindi, English, Kannada, Tamil and Telugu, where Murf lists it; Gujarati, Bengali, Marathi and Malayalam default to native voices because Pooja is not listed for them. The choice is remembered per language in the browser and sent as `voice` to `/api/invite-agent`, which only accepts a voice offered for that language (otherwise the default). `MURF_VOICE_ID` is no longer used. `MURF_WS_URL` still overrides the Murf endpoint (default `wss://global.api.murf.ai/...`, which routes to the nearest region).
+
 ## Doctor call
 
 For HIGH and URGENT visits the alert message carries a signed link (`/call/<token>`, valid 6 hours). The doctor taps it and joins a browser voice call with the ASHA over Agora RTC: no app, no account, audio only. The page shows the visit summary beside the call. The ASHA opens the same call from the "call doctor" button on the result card. Needs `PUBLIC_BASE_URL` set so the link is absolute.

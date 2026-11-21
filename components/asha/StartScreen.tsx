@@ -9,6 +9,8 @@ import { HELLO } from '@/lib/i18n';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
 import { ConnectingGreetings } from './ConnectingGreetings';
 import { GoodToKnow } from './RecordGuide';
+import { VoicePicker } from './VoicePicker';
+import { VOICES } from '@/lib/voices';
 import { cn } from '@/lib/utils';
 
 type StartScreenProps = {
@@ -17,10 +19,12 @@ type StartScreenProps = {
   onStart: () => void;
   language: LangCode;
   onLanguageChange: (code: LangCode) => void;
+  voice: string;
+  onVoiceChange: (id: string) => void;
 };
 
 // Pre-call screen: one big tap target. The whole screen is written in the language the person picked.
-export function StartScreen({ isLoading, error, onStart, language, onLanguageChange }: StartScreenProps) {
+export function StartScreen({ isLoading, error, onStart, language, onLanguageChange, voice, onVoiceChange }: StartScreenProps) {
   const { s, uiLang } = useLanguage();
   const router = useRouter();
   async function signOut() {
@@ -28,7 +32,7 @@ export function StartScreen({ isLoading, error, onStart, language, onLanguageCha
     router.push('/login');
   }
   return (
-    <div className="relative mx-auto flex h-dvh w-full max-w-md flex-col lg:max-w-2xl items-center justify-between bg-asha-cream px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))] text-center">
+    <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col lg:max-w-2xl items-center justify-between gap-5 bg-asha-cream px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))] text-center">
       <Link href="/" className="absolute left-4 top-4 rounded-full px-3 py-2 text-sm font-medium text-asha-muted underline underline-offset-4 hover:text-asha-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-asha-teal">
         {s.about}
       </Link>
@@ -71,6 +75,8 @@ export function StartScreen({ isLoading, error, onStart, language, onLanguageCha
           </p>
         )}
       </div>
+
+      <VoicePicker voices={VOICES[language]} value={voice} onChange={onVoiceChange} disabled={isLoading} s={s} />
 
       <Orb
         state={isLoading ? 'joining' : 'listening'}
