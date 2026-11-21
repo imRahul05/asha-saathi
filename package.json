@@ -25,6 +25,8 @@
     "alerts:test": "node --env-file=.env.local --import tsx scripts/send-test-alert.ts",
     "twilio:test": "node --env-file=.env.local --import tsx scripts/send-test-alert.ts",
     "telegram:setup": "node --env-file=.env.local --import tsx scripts/telegram-setup.ts",
+    "demo:warmup": "node --env-file-if-exists=.env.local --import tsx scripts/warmup.ts",
+    "demo:reset": "node --env-file=.env.local --import tsx scripts/demo-reset.ts",
     "verify": "pnpm run doctor && pnpm run lint && pnpm run typecheck && pnpm run verify:api && pnpm run build"
   },
   "dependencies": {
