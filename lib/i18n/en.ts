@@ -160,6 +160,10 @@ export const en = {
   voiceHint: 'Swipe to choose a voice',
   voicePrev: 'Previous voice',
   voiceNext: 'Next voice',
+  stepLanguage: 'Choose your language',
+  stepVoice: 'Choose a voice. Tap one to hear it',
+  stepStart: 'Press the button and start talking',
+  startButton: 'Start talking',
   goodToKnow: 'What Saathi cannot do',
   cant: ['It does not diagnose.', 'It does not suggest medicines or doses.', 'It cannot add new mothers yet.', 'It is not connected to government systems: the data here is a demo.', 'It covers pregnancy visits only for now.'],
 };

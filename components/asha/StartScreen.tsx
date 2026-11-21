@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { BrandMark } from '@/components/BrandMark';
-import { Orb } from './Orb';
+import { SaathiAvatar } from './SaathiAvatar';
 import { LANGUAGES, LANGUAGE_ORDER, type LangCode } from '@/lib/languages';
 import { HELLO } from '@/lib/i18n';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
@@ -24,6 +24,15 @@ type StartScreenProps = {
   /** id of the voice whose sample is playing right now, if any */
   playingVoice?: string | null;
 };
+
+function Step({ n, title }: { n: number; title: string }) {
+  return (
+    <h2 className="mb-3 flex items-center justify-center gap-2 text-lg font-extrabold leading-6">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-asha-teal text-sm font-bold text-white" aria-hidden>{n}</span>
+      {title}
+    </h2>
+  );
+}
 
 // Pre-call screen: one big tap target. The whole screen is written in the language the person picked.
 export function StartScreen({ isLoading, error, onStart, language, onLanguageChange, voice, onVoiceChange, playingVoice }: StartScreenProps) {
@@ -52,7 +61,7 @@ export function StartScreen({ isLoading, error, onStart, language, onLanguageCha
       </div>
 
       <div className="w-full max-w-sm">
-        <p className="mb-2 text-sm font-semibold text-asha-muted">{s.callLanguage}</p>
+        <Step n={1} title={s.stepLanguage} />
         <div className="flex flex-wrap justify-center gap-2" role="radiogroup" aria-label={s.callLanguage}>
           {LANGUAGE_ORDER.map((c) => (
             <button
@@ -78,15 +87,20 @@ export function StartScreen({ isLoading, error, onStart, language, onLanguageCha
         )}
       </div>
 
-      <VoicePicker voices={VOICES[language]} value={voice} onChange={onVoiceChange} disabled={isLoading} s={s} playingId={playingVoice} />
+      <div className="w-full max-w-sm">
+        <Step n={2} title={s.stepVoice} />
+        <VoicePicker voices={VOICES[language]} value={voice} onChange={onVoiceChange} disabled={isLoading} s={s} playingId={playingVoice} />
+      </div>
 
-      <Orb
-        state={isLoading ? 'joining' : 'listening'}
-        label={isLoading ? s.connecting : s.tapToStart}
-        onClick={onStart}
-        disabled={isLoading}
-        ariaLabel={isLoading ? s.connecting : s.tapToStart}
-      />
+      <div className="flex w-full max-w-sm flex-col items-center">
+        <Step n={3} title={s.stepStart} />
+        <SaathiAvatar
+          state={isLoading ? 'connecting' : playingVoice ? 'talking' : 'idle'}
+          label={isLoading ? s.connecting : s.startButton}
+          onClick={onStart}
+          disabled={isLoading}
+        />
+      </div>
       {isLoading && <ConnectingGreetings words={language === 'auto' ? Object.values(HELLO) : [HELLO[uiLang]]} />}
 
       <div className="min-h-12 max-w-[20rem] text-sm text-asha-red" role={error ? 'alert' : undefined}>
