@@ -4,6 +4,34 @@ import { Mic, MicOff, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { OrbState } from '@/lib/asha/lang';
 
+const BAR_H = [0.35, 0.7, 0.5, 1, 0.6, 0.85, 0.4, 0.95, 0.55, 0.8, 0.45, 0.7, 0.9, 0.4, 0.6, 0.75, 0.35];
+
+/** A row of bars that dances while Saathi speaks, ripples gently while she listens, and three dots bounce while she thinks. */
+function VoiceWave({ state }: { state: OrbState }) {
+  if (state === 'thinking') {
+    return (
+      <div className="flex h-12 items-center gap-2" aria-hidden>
+        {[0, 1, 2].map((i) => (
+          <span key={i} className="think-dot h-3 w-3 rounded-full bg-asha-teal" style={{ animationDelay: `${i * 160}ms` }} />
+        ))}
+      </div>
+    );
+  }
+  if (state !== 'speaking' && state !== 'listening') return <div className="h-12" aria-hidden />;
+  const speaking = state === 'speaking';
+  return (
+    <div className={cn('flex h-12 items-center gap-[5px]', speaking ? 'wave-speak' : 'wave-listen')} aria-hidden>
+      {BAR_H.map((h, i) => (
+        <span
+          key={i}
+          className={cn('wave-bar w-[5px] rounded-full', speaking ? 'bg-asha-teal' : 'bg-asha-orange/70')}
+          style={{ height: `${h * 100}%`, animationDelay: `${(i % 6) * 90}ms` }}
+        />
+      ))}
+    </div>
+  );
+}
+
 type OrbProps = {
   state: OrbState;
   label: string;
@@ -35,8 +63,8 @@ export function Orb({ state, label, onClick, disabled, size = 'lg', ariaLabel }:
       <div className={cn('relative flex items-center justify-center', dim)}>
         {active && (
           <>
-            <span className={cn('orb-ring absolute inset-0 rounded-full', ringTone)} aria-hidden />
-            <span className={cn('orb-ring-d absolute inset-0 rounded-full', ringTone)} aria-hidden />
+            <span className={cn('orb-ring pointer-events-none absolute inset-0 rounded-full', ringTone)} aria-hidden />
+            <span className={cn('orb-ring-d pointer-events-none absolute inset-0 rounded-full', ringTone)} aria-hidden />
           </>
         )}
         <button
@@ -63,6 +91,7 @@ export function Orb({ state, label, onClick, disabled, size = 'lg', ariaLabel }:
           )}
         </button>
       </div>
+      <VoiceWave state={state} />
       <p className="min-h-8 text-center text-2xl font-bold leading-8 text-asha-ink lg:text-3xl" aria-live="polite">
         {label}
       </p>
