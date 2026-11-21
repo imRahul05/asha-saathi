@@ -185,6 +185,12 @@ export const en = {
   relInDays: (n: number) => `in ${n} days`,
   relOverdue: (n: number) => n === 1 ? '1 day overdue' : `${n} days overdue`,
   schedDue: (n: number) => `${n} due now`,
+  errAsrRetrying: 'Saathi cannot hear you right now. Trying again…',
+  errAsrFinal: 'Saathi still cannot hear you. Tap Retry, or type your message in the box below.',
+  errLlm: 'Saathi is having trouble understanding right now. Please try again.',
+  errTts: 'Saathi cannot speak right now. You can still read her replies here.',
+  errGeneric: 'Something went wrong with the voice assistant. Please try again.',
+  errDetails: 'Details for support',
   goodToKnow: 'What Saathi cannot do',
   cant: ['It does not diagnose.', 'It does not suggest medicines or doses.', 'It cannot add new mothers yet.', 'It is not connected to government systems: the data here is a demo.', 'It covers pregnancy visits only for now.'],
 };

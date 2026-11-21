@@ -98,8 +98,9 @@ export default function LandingPage() {
   };
   const playingVoice = preview.playing && preview.playing.startsWith(`${sampleLang(language)}:`) ? preview.playing.slice(sampleLang(language).length + 1) : null;
 
-  const handleStartConversation = async () => {
+  const handleStartConversation = async (isAutoRetry?: boolean) => {
     preview.stop();
+    if (isAutoRetry !== true) autoRetriesLeft.current = 1;
     setIsLoading(true);
     setError(null);
     setAgentJoinError(null);
@@ -248,6 +249,14 @@ export default function LandingPage() {
     [agoraData],
   );
 
+  // One automatic retry per started call (used when the speech service could not connect). A tap on Start gives a new allowance.
+  const autoRetriesLeft = useRef(1);
+  const handleRestart = async (auto?: boolean) => {
+    if (auto) autoRetriesLeft.current = 0;
+    await handleEndConversation();
+    await handleStartConversation(auto);
+  };
+
   const handleEndConversation = async () => {
     // Stop the AI agent
     if (agoraData?.agentId) {
@@ -297,6 +306,8 @@ export default function LandingPage() {
                   rtmClient={rtmClient}
                   onTokenWillExpire={handleTokenWillExpire}
                   onEndConversation={handleEndConversation}
+                  onRestart={handleRestart}
+                  canAutoRetry={() => autoRetriesLeft.current > 0}
                   callLanguage={callLanguage}
                 />
               </AgoraProvider>
