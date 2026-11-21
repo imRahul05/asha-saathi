@@ -15,6 +15,7 @@ import { StartScreen } from './asha/StartScreen';
 import { DEFAULT_LANGUAGE, type LangCode } from '@/lib/languages';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
 import { defaultVoice, resolveVoice } from '@/lib/voices';
+import { useVoicePreview } from '@/hooks/use-voice-preview';
 
 // Dynamically import the ConversationComponent with ssr disabled
 const ConversationComponent = dynamic(() => import('./ConversationComponent'), {
@@ -81,12 +82,24 @@ export default function LandingPage() {
     try { saved = window.localStorage.getItem(`asha_voice_${language}`); } catch { /* storage blocked: use the default */ }
     setVoiceState(resolveVoice(language, saved).id);
   }, [language]);
+  // Tapping a voice or a language plays a short sample of it (samples are static files, made once with `pnpm voice:samples`; Auto uses the Hindi ones).
+  const preview = useVoicePreview();
+  const sampleLang = (l: LangCode) => (l === 'auto' ? 'hi' : l);
   const chooseVoice = (id: string) => {
     setVoiceState(id);
     try { window.localStorage.setItem(`asha_voice_${language}`, id); } catch { /* ignore */ }
+    preview.play(sampleLang(language), id);
   };
+  const pickLanguage = (code: LangCode) => {
+    chooseLanguage(code);
+    let saved: string | null = null;
+    try { saved = window.localStorage.getItem(`asha_voice_${code}`); } catch { /* ignore */ }
+    preview.play(sampleLang(code), resolveVoice(code, saved).id);
+  };
+  const playingVoice = preview.playing && preview.playing.startsWith(`${sampleLang(language)}:`) ? preview.playing.slice(sampleLang(language).length + 1) : null;
 
   const handleStartConversation = async () => {
+    preview.stop();
     setIsLoading(true);
     setError(null);
     setAgentJoinError(null);
@@ -250,7 +263,7 @@ export default function LandingPage() {
   return (
     <div className="relative h-dvh overflow-hidden bg-asha-cream text-asha-ink">
       {!showConversation ? (
-        <StartScreen isLoading={isLoading} error={error} onStart={handleStartConversation} language={language} onLanguageChange={chooseLanguage} voice={voice} onVoiceChange={chooseVoice} />
+        <StartScreen isLoading={isLoading} error={error} onStart={handleStartConversation} language={language} onLanguageChange={pickLanguage} voice={voice} onVoiceChange={chooseVoice} playingVoice={playingVoice} />
       ) : agoraData && rtmClient ? (
         <>
           {/* Non-fatal: the call screen still renders, but say exactly why the agent is missing. */}
