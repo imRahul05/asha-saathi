@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, Loader2, Phone, Send, TriangleAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SnapshotVisit } from '@/lib/snapshot-types';
@@ -23,6 +23,78 @@ export function AlertBar({ visit, s }: { visit: SnapshotVisit; s: Strings }) {
   const [err, setErr] = useState<string | null>(null);
   // a new visit or a new alert state clears an old error
   useEffect(() => setErr(null), [visit.id, alert?.status]);
+
+  // Automatic alert for HIGH and URGENT visits: a 10 second countdown, with Cancel and Send now. The alert goes out when it reaches 0 unless she
+  // cancelled (tap, or by saying stop: both are recorded as `alertHeld`). Sending is once-only on the server, so a spoken "yes" at the same time is safe.
+  const COUNTDOWN = 10;
+  const serious = visit.risk.level === 'high' || visit.risk.level === 'urgent';
+  const [cancelledFor, setCancelledFor] = useState<string | null>(null);
+  const [left, setLeft] = useState(COUNTDOWN);
+  const firedFor = useRef<string | null>(null);
+  const counting = serious && (!alert || alert.status === 'draft') && !visit.alertHeld && cancelledFor !== visit.id;
+  useEffect(() => {
+    if (!counting) return;
+    setLeft(COUNTDOWN);
+    const id = setInterval(() => setLeft((n) => Math.max(0, n - 1)), 1000);
+    return () => clearInterval(id);
+  }, [counting, visit.id]);
+  useEffect(() => {
+    if (counting && left === 0 && firedFor.current !== visit.id) {
+      firedFor.current = visit.id;
+      void sendNow();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [counting, left, visit.id]);
+
+  async function cancelCountdown() {
+    setCancelledFor(visit.id);
+    try {
+      await fetch('/api/alerts/hold', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitId: visit.id }) });
+    } catch {
+      /* the screen already stopped the countdown; the server flag is a bonus */
+    }
+  }
+
+  if (counting) {
+    const who = visit.doctor ?? alert?.doctor ?? 'Doctor';
+    return (
+      <section aria-label={s.countdownT(left, who)} className="rounded-3xl border border-[#B7791F]/40 bg-asha-amber p-4 text-[#7A4E0A]" role="timer">
+        <div className="flex flex-wrap items-center gap-3">
+          <TriangleAlert className="h-6 w-6 shrink-0" aria-hidden />
+          <p className="min-w-0 flex-1 text-lg font-extrabold leading-6">{s.countdownT(left, who)}</p>
+          <button type="button" onClick={cancelCountdown} className="inline-flex h-11 shrink-0 items-center justify-center rounded-full border-2 border-[#7A4E0A] bg-white px-5 text-base font-bold text-[#7A4E0A] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#7A4E0A]/30">
+            {s.cancelAlert}
+          </button>
+          <button type="button" onClick={() => { firedFor.current = visit.id; void sendNow(); }} disabled={sending} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-asha-night px-5 text-base font-bold text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-asha-night/40 disabled:opacity-70">
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
+            {s.sendNow}
+          </button>
+        </div>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/70" aria-hidden>
+          <div className="h-full rounded-full bg-[#B7791F] transition-[width] duration-1000 ease-linear" style={{ width: `${(left / COUNTDOWN) * 100}%` }} />
+        </div>
+        {err && <p role="alert" className="mt-2 text-sm font-bold">{err}</p>}
+      </section>
+    );
+  }
+
+  // She stopped the automatic alert and nothing is drafted or sent: say so, and keep a Send now button.
+  if (serious && !alert && (visit.alertHeld || cancelledFor === visit.id)) {
+    return (
+      <section aria-label={s.heldT} className="rounded-3xl border border-asha-line bg-white p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <Check className="h-6 w-6 shrink-0 text-asha-muted" aria-hidden />
+          <p className="min-w-0 flex-1 text-lg font-extrabold leading-6">{s.heldT}</p>
+          <button type="button" onClick={sendNow} disabled={sending} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-asha-night px-5 text-base font-bold text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-asha-night/40 disabled:opacity-70">
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
+            {s.sendNow}
+          </button>
+        </div>
+        <p className="mt-2 text-sm text-asha-muted">{s.autoSendNote}</p>
+        {err && <p role="alert" className="mt-2 text-sm font-bold text-asha-red">{err}</p>}
+      </section>
+    );
+  }
   if (!alert) return null;
 
   const draft = alert.status === 'draft';

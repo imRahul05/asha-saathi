@@ -16,6 +16,8 @@ export const DEV_SNAPSHOT: Snapshot = {
     },
     alert: { status: 'sent', channel: 'twilio-whatsapp', doctor: 'Dr. Rao', phc: 'Kolar PHC', message: 'High risk ANC visit\nSunita Devi, Narsapura · 28 weeks\nBP 150/100, swelling in feet\nASHA: Meena Kumari · 11:42\nPlease review soon.', sentAt: new Date().toISOString(), error: null },
     call: { doctorJoinedAt: null, lastEventAt: null },
+    alertHeld: false,
+    doctor: 'Dr. Rao',
     followUp: { dueDate: new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10), reason: 'recheck BP' },
   },
   events: [

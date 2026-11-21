@@ -4,7 +4,8 @@ import type { Db } from '@/lib/db/client';
 import { insertBeneficiary, listEvents } from '@/lib/db/repo';
 import type { Notifier } from '@/lib/notify';
 import { executeTool, TOOLS, TOOL_NAMES, type ToolContext } from '@/lib/tools';
-import { amendLastVisit, draftAlert, findBeneficiary, getBeneficiaryHistory, recordVisit, scheduleFollowUp, sendAlert, todaySummary, weeksFromLmp } from './tools';
+import { getSnapshot } from '@/lib/snapshot';
+import { amendLastVisit, draftAlert, findBeneficiary, getBeneficiaryHistory, holdAlert, recordVisit, scheduleFollowUp, sendAlert, todaySummary, weeksFromLmp } from './tools';
 
 let db: Db & { close: () => Promise<void> };
 let ashaId: string;
@@ -45,7 +46,7 @@ afterAll(async () => db.close());
 describe('tool registry', () => {
   it('has unique, camelCase names that match what the agent will be told', () => {
     expect(new Set(TOOL_NAMES).size).toBe(TOOLS.length);
-    expect(TOOL_NAMES).toEqual(['findBeneficiary', 'getBeneficiaryHistory', 'recordVisit', 'amendLastVisit', 'scheduleFollowUp', 'todaySummary', 'draftAlert', 'sendAlert', 'searchGuidelines']);
+    expect(TOOL_NAMES).toEqual(['findBeneficiary', 'getBeneficiaryHistory', 'recordVisit', 'amendLastVisit', 'holdAlert', 'scheduleFollowUp', 'todaySummary', 'draftAlert', 'sendAlert', 'searchGuidelines']);
   });
 });
 
@@ -377,5 +378,57 @@ describe('amendLastVisit', () => {
     expect(!r.ok && r.code).toBe(code);
     const v = await row(visitId);
     expect([v.bp_sys, v.bp_dia, v.risk_level]).toEqual([150, 100, 'high']);
+  });
+});
+
+describe('holdAlert (stop the automatic alert)', () => {
+  let n = 0;
+  async function setup() {
+    n += 1;
+    const b = await insertBeneficiary(db, { ashaId, name: `Hold Mother ${n}`, village: 'Holdpur', age: 27, parity: 1 });
+    const c = ctx({ sessionId: `hold-call-${n}` });
+    const r = await executeTool(recordVisit, { beneficiaryId: b.id, gestationWeeks: 30, bpSys: 152, bpDia: 102, symptoms: [] }, c);
+    if (!r.ok) throw new Error('setup failed');
+    return { c, visitId: r.data.visitId };
+  }
+
+  it('stops a drafted alert so it can no longer be sent, and the snapshot says it is held', async () => {
+    const { c, visitId } = await setup();
+    const d = await executeTool(draftAlert, { visitId }, c);
+    expect(d.ok && !d.data.alreadySent).toBe(true);
+    const h = await executeTool(holdAlert, {}, c);
+    expect(h.ok).toBe(true);
+    if (!h.ok) return;
+    expect(h.data).toMatchObject({ held: true, alert: 'draft_cancelled' });
+    if (!d.ok || d.data.alreadySent) throw new Error('draft failed');
+    const s = await executeTool(sendAlert, { token: d.data.token }, c); // that draft can no longer be sent
+    expect(s.ok).toBe(false);
+    if (!s.ok) expect(s.code).toBe('EXPIRED');
+    const snap = await getSnapshot(db, { sessionId: c.sessionId, ashaId });
+    expect(snap.visit?.alertHeld).toBe(true);
+    expect(snap.visit?.doctor).toBe('Dr Rao');
+  });
+
+  it('holds even when no draft exists yet (the countdown is on screen only)', async () => {
+    const { c } = await setup();
+    const h = await executeTool(holdAlert, {}, c);
+    expect(h.ok && h.data).toMatchObject({ held: true, alert: 'none' });
+    const snap = await getSnapshot(db, { sessionId: c.sessionId, ashaId });
+    expect(snap.visit?.alertHeld).toBe(true);
+  });
+
+  it('cannot take back an alert that was already sent', async () => {
+    const { c, visitId } = await setup();
+    await executeTool(draftAlert, { visitId }, c);
+    const sent = await executeTool(sendAlert, {}, c);
+    expect(sent.ok).toBe(true);
+    const h = await executeTool(holdAlert, {}, c);
+    expect(h.ok && h.data).toMatchObject({ held: false, alert: 'already_sent' });
+  });
+
+  it('refuses when no visit was saved in this call, and a new visit is not held by an old stop', async () => {
+    const none = await executeTool(holdAlert, {}, ctx({ sessionId: 'hold-empty-call' }));
+    expect(none.ok).toBe(false);
+    if (!none.ok) expect(none.code).toBe('NO_VISIT_IN_CALL');
   });
 });

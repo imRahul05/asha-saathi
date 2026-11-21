@@ -121,6 +121,8 @@ const EMPTY_VISIT = {
   id: '', visitedAt: new Date(0).toISOString(),
   beneficiary: { name: '', village: null, weeks: null, age: null, firstPregnancy: null },
   call: { doctorJoinedAt: null, lastEventAt: null },
+  alertHeld: false,
+  doctor: null,
   vitals: { bpSys: null, bpDia: null, hb: null, symptoms: [] },
   risk: { level: 'normal' as const, rulesVersion: '', reasons: [] },
   alert: null, followUp: null,

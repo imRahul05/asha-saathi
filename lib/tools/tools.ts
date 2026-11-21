@@ -132,10 +132,31 @@ export const recordVisit = defineTool({
       vitals: { bp: visit.bpSys != null ? `${visit.bpSys}/${visit.bpDia}` : null, hb: visit.hb, symptoms: visit.symptoms },
       risk: riskForModel(risk),
       nextStep: serious
-        ? 'Tell the ASHA the risk level and the main reason in one or two sentences, then ask if she wants the doctor alerted (draftAlert). Also offer a follow-up (scheduleFollowUp).'
+        ? 'Tell the ASHA the risk level and the main reason in one or two sentences, then say the doctor will be alerted automatically in 10 seconds unless she says stop or taps Cancel on the screen. Do NOT ask a yes/no question and do NOT call draftAlert or sendAlert yourself: the screen sends it. If she says stop, wait, no or cancel, call holdAlert. If she says yes or send now, call draftAlert then sendAlert. Offer a follow-up (scheduleFollowUp) after that.'
         : risk.level === 'watch'
           ? 'Tell the ASHA it needs watching and suggest a follow-up visit (scheduleFollowUp).'
           : 'Tell the ASHA the visit is saved and all looks normal.',
+    };
+  },
+});
+
+export const holdAlert = defineTool({
+  name: 'holdAlert',
+  description:
+    'Stop the automatic doctor alert for the visit just saved in this call. Call it when the ASHA says stop, wait, no or cancel after you told her the doctor will be alerted in 10 seconds. It sends nothing. If the alert was already sent it cannot be taken back and says so.',
+  input: z.object({}),
+  async run(_input, ctx) {
+    const last = ctx.sessionId ? await latestVisit(ctx.db, { sessionId: ctx.sessionId, ashaId: ctx.ashaId }) : null;
+    if (!last) throw new ToolError('NO_VISIT_IN_CALL', 'इस कॉल में अभी कोई visit सेव नहीं हुई है।', 'No visit was saved in this call, so there is no alert to hold.');
+    const alerts = await alertsForVisit(ctx.db, last.id);
+    if (alerts.some((a) => a.status === 'sent')) {
+      return { held: false, alert: 'already_sent' as const, hint: 'The doctor was already alerted and that cannot be undone. Tell her so in one sentence.' };
+    }
+    const cancelled = await expireUnsentAlertsForVisit(ctx.db, last.id);
+    return {
+      held: true,
+      alert: cancelled > 0 ? ('draft_cancelled' as const) : ('none' as const),
+      hint: 'The automatic alert is stopped and nothing was sent. Tell her in one short sentence. If she later says send it, call draftAlert then sendAlert.',
     };
   },
 });

@@ -23,13 +23,12 @@ Use only claims that are true today. Live URL: https://asha-saathi-mocha.vercel.
    *"Sunita Devi ke ghar gayi thi. Saat mahine. BP 150 by 100. Pairon mein sujan hai."*
 3. Show: the transcript, then the red **HIGH RISK** card, the checklist ticks (BP, weeks, symptoms; Hb "not recorded"), and "Recorded in N seconds".
    Say: "The AI did not decide this. A written rule did, and it shows the reason and the source: BP 140/90 or higher, ICMR guidance."
-4. Saathi asks: shall I alert the doctor? Say *"Haan, bhej do."*
-   Hold up the doctor phone: it buzzes with the colour alert. (If it does not, tap **Send now** on the screen.)
+4. Saathi says the doctor will be alerted in 10 seconds unless you say stop. A countdown with **Cancel** and **Send now** shows on screen. Let it run (or tap **Send now**), then hold up the doctor phone: it buzzes with the colour alert. (To show control, in another run say *"Ruko"* / tap **Cancel** and nothing is sent.)
 5. Ask: *"Family ko iron ki goli ke bare mein kya batayein?"* Saathi answers from the official guideline and names the source.
 6. Optional if time: tap **Talk to the doctor** and show the browser voice call link.
 
 ### 4. Why it is safe (25 s)
-"Three safeguards. One: rules decide risk, not the AI, and every flag shows its source. Two: nothing is sent until she says yes, and saying yes twice never sends two. Three: health advice comes only from quotes of official government documents, checked against the PDFs. If it does not know, it says ask the Medical Officer. It refuses doses and diagnoses."
+"Three safeguards. One: rules decide risk, not the AI, and every flag shows its source. Two: for a high-risk visit the doctor is alerted after a 10 second countdown that she can stop by voice or by tap, and the alert is sent only once. Three: health advice comes only from quotes of official government documents, checked against the PDFs. If it does not know, it says ask the Medical Officer. It refuses doses and diagnoses."
 
 ### 5. Built on (15 s)
 "Agora Conversational AI for the real-time voice, Murf Falcon for the voice in nine Indian languages, tools running on Next.js with a Postgres database. The same rules engine works in any language."
@@ -42,6 +41,7 @@ Use only claims that are true today. Live URL: https://asha-saathi-mocha.vercel.
 |---|---|
 | No captions appear | Carry on. The call and alert still work. Say "live captions hiccuped". Tap Retry if shown. |
 | Alert says ready but not sent | Tap **Send now**. |
+| Countdown fires by mistake | Tell the judges the alert is once-only and stoppable; show **Cancel** on the next run. |
 | Agent does not join | Tap Retry once. Then play the backup video. |
 | Wi-Fi dies | Play the backup video, narrate over it. |
 
@@ -61,6 +61,7 @@ Use only claims that are true today. Live URL: https://asha-saathi-mocha.vercel.
 **What about privacy?** Demo data is private to each visitor and deleted after 24 hours. Alerts go only to the doctor on file. Saathi refuses to read out other people's details.
 
 ## Do not say
+- That nothing is ever sent without a yes: high-risk alerts go out automatically after the countdown unless she stops them.
 - That it replaces SAMASTA or removes duplicate entry.
 - That it reduces maternal deaths or has clinical evidence.
 - That WhatsApp works for the demo.
