@@ -19,7 +19,7 @@ export type LanguageConfig = {
   /** What the agent says first, and when it did not understand */
   greeting: string;
   failure: string;
-  /** How the agent addresses the ASHA: the local word for "elder sister" (didi), in the language's own script so the voice pronounces it correctly */
+  /** How the agent addresses the ASHA: the local word for "elder sister" (didi in Hindi, "sister" in English), in the language's own script so the voice pronounces it correctly */
   address: string;
   /** true when this language's Agora tag is a stand-in (see `agora`) */
   standIn?: boolean;
@@ -30,8 +30,8 @@ export type LanguageConfig = {
 export const LANGUAGES: Record<LangCode, LanguageConfig> = {
   hi: { code: 'hi', glossary: 'BP = ब्लड प्रेशर / बी पी; swelling = सूजन; 100 = सौ / एक सौ; 150 = एक सौ पचास; 120 = एक सौ बीस; 90 = नब्बे; 80 = अस्सी', name: 'Hindi', native: 'हिंदी', deepgram: 'hi', agora: ['hi-IN'], murf: 'hi-IN', address: 'दीदी',
     greeting: 'नमस्ते दीदी! किसके घर visit हुई?', failure: 'माफ़ कीजिए, फिर से बोलिए।' },
-  en: { code: 'en', glossary: 'BP = blood pressure; swelling = swelling of feet or legs', name: 'English', native: 'English', deepgram: 'en-IN', agora: ['en-IN'], murf: 'en-IN', address: 'didi',
-    greeting: 'Hello didi! Whose home did you visit?', failure: 'Sorry, please say that again.' },
+  en: { code: 'en', glossary: 'BP = blood pressure; swelling = swelling of feet or legs', name: 'English', native: 'English', deepgram: 'en-IN', agora: ['en-IN'], murf: 'en-IN', address: 'sister',
+    greeting: 'Hello sister! Whose home did you visit?', failure: 'Sorry, please say that again.' },
   kn: { code: 'kn', glossary: 'BP = ರಕ್ತದೊತ್ತಡ; swelling = ಊತ; 100 = ನೂರು; 150 = ನೂರ ಐವತ್ತು; 120 = ನೂರ ಇಪ್ಪತ್ತು; 90 = ತೊಂಬತ್ತು; 80 = ಎಂಬತ್ತು', name: 'Kannada', native: 'ಕನ್ನಡ', deepgram: 'kn', agora: ['kn-IN'], murf: 'kn-IN', address: 'ಅಕ್ಕ',
     greeting: 'ನಮಸ್ಕಾರ ಅಕ್ಕ! ಯಾರ ಮನೆಗೆ ಭೇಟಿ ನೀಡಿದಿರಿ?', failure: 'ಕ್ಷಮಿಸಿ, ದಯವಿಟ್ಟು ಮತ್ತೆ ಹೇಳಿ.' },
   ta: { code: 'ta', glossary: 'BP = இரத்த அழுத்தம்; swelling = வீக்கம்; 100 = நூறு; 150 = நூற்று ஐம்பது; 120 = நூற்று இருபது; 90 = தொண்ணூறு; 80 = எண்பது', name: 'Tamil', native: 'தமிழ்', deepgram: 'ta', agora: ['ta-IN'], murf: 'ta-IN', address: 'அக்கா',

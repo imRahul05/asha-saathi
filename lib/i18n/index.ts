@@ -28,7 +28,7 @@ export function stringsFor(code: string | null | undefined, fallback: UiLang = '
 /** A short hello in each language, for the language grid and the connecting animation. */
 export const HELLO: Record<UiLang, string> = {
   hi: 'नमस्ते दीदी',
-  en: 'Hello didi',
+  en: 'Hello sister',
   kn: 'ನಮಸ್ಕಾರ ಅಕ್ಕ',
   ta: 'வணக்கம் அக்கா',
   te: 'నమస్కారం అక్కా',
