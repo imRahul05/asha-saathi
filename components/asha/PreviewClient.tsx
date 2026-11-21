@@ -33,7 +33,12 @@ export function PreviewClient() {
   const [problem, setProblem] = useState(false);
   const [withVisit, setWithVisit] = useState(true);
 
-  const snapshot = withVisit ? DEV_SNAPSHOT : { ...DEV_SNAPSHOT, visit: null, events: [], counts: { visits: 0, highRisk: 0, alertsSent: 0, followUps: 0 } };
+  // Schedule scenario: open on the Schedule tab, optionally with no planned visits (empty state).
+  const [startTab, setStartTab] = useState<'talk' | 'schedule'>('talk');
+  const [emptySchedule, setEmptySchedule] = useState(false);
+
+  const base = withVisit ? DEV_SNAPSHOT : { ...DEV_SNAPSHOT, visit: null, events: [], counts: { visits: 0, highRisk: 0, alertsSent: 0, followUps: 0 } };
+  const snapshot = emptySchedule ? { ...base, schedule: [] } : base;
 
   return (
     <div className="bg-asha-sand">
@@ -54,12 +59,17 @@ export function PreviewClient() {
             ))}
             <button onClick={() => setProblem((p) => !p)} className={pill(problem, 'bg-asha-red')}>problem banner</button>
             <button onClick={() => setWithVisit((p) => !p)} className={pill(withVisit, 'bg-asha-teal')}>saved visit</button>
+            <button onClick={() => setStartTab((t) => (t === 'schedule' ? 'talk' : 'schedule'))} className={pill(startTab === 'schedule', 'bg-asha-night')}>schedule tab</button>
+            <button onClick={() => setEmptySchedule((p) => !p)} className={pill(emptySchedule, 'bg-asha-night')}>empty schedule</button>
           </>
         )}
       </div>
 
       {screen === 'voice' ? (
         <VoiceScreen
+          key={startTab}
+          initialTab={startTab}
+          callLanguage={set === 'empty' ? 'hi' : set}
           orbState={state}
           messageList={SETS[set]}
           currentInProgressMessage={null}

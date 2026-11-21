@@ -16,6 +16,9 @@ import { ConnectingGreetings } from './ConnectingGreetings';
 import { AlertBar } from './AlertBar';
 import { TypeBox } from './TypeBox';
 import { HintStrip, RecordGuide } from './RecordGuide';
+import { TabBar } from './TabBar';
+import { SchedulePanel } from './SchedulePanel';
+import { dueNowCount, todayInIndia } from '@/lib/asha/schedule';
 
 export type TranscriptMessage = {
   turn_id?: string | number;
@@ -41,6 +44,8 @@ type VoiceScreenProps = {
   snapshotError?: string | null;
   /** Language the call was started in (fixed for the call) */
   callLanguage?: string;
+  /** Which tab to open first (the dev preview uses this; real calls start on the conversation). */
+  initialTab?: 'talk' | 'result' | 'schedule';
 };
 
 const orbLabel = (s: (typeof STRINGS)['en'], state: OrbState): string =>
@@ -50,9 +55,10 @@ const initials = (name: string) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
 
 export function VoiceScreen({
-  orbState, messageList, currentInProgressMessage, agentUID, onToggleMic, onSendText, onEnd, micSelector, problem, snapshot = null, snapshotError = null, callLanguage = 'hi',
+  orbState, messageList, currentInProgressMessage, agentUID, onToggleMic, onSendText, onEnd, micSelector, problem, snapshot = null, snapshotError = null, callLanguage = 'hi', initialTab = 'talk',
 }: VoiceScreenProps) {
-  const [tab, setTab] = useState<'talk' | 'result'>('talk');
+  // Phone: talk | result | schedule. Desktop: the conversation is always visible; the right panel shows result or schedule.
+  const [tab, setTab] = useState<'talk' | 'result' | 'schedule'>(initialTab);
   const scrollRef = useRef<HTMLDivElement>(null);
   const seenVisit = useRef<string | null>(null);
   // How long a visit took: from her first words in this call to the moment the visit shows up as saved.
@@ -105,7 +111,16 @@ export function VoiceScreen({
     }
   }, [visit]);
 
-  const orbClickable = orbState !== 'joining' && orbState !== 'not-joined' && orbState !== 'disconnected';
+  const schedule = useMemo(() => snapshot?.schedule ?? [], [snapshot]);
+  const dueNow = useMemo(() => dueNowCount(schedule, todayInIndia()), [schedule]);
+  const dueBadge = dueNow > 0 && (
+    <span className="min-w-6 rounded-full bg-asha-red px-1.5 text-center text-sm font-bold leading-6 text-white" aria-label={s.schedDue(dueNow)}>
+      {dueNow}
+    </span>
+  );
+  const visitDot = visit && tab !== 'result' && <span className="h-2.5 w-2.5 rounded-full bg-asha-red" aria-label="new" />;
+
+  const orbClickable =orbState !== 'joining' && orbState !== 'not-joined' && orbState !== 'disconnected';
   const asha = snapshot?.asha ?? null;
   const counts = snapshot?.counts ?? null;
   const noDb = snapshotError === 'DATABASE_NOT_CONFIGURED';
@@ -113,7 +128,7 @@ export function VoiceScreen({
 
   return (
     // Phone: one column, one screen. Desktop (lg+): full-width grid, conversation left, orb + result right.
-    <div className="mx-auto flex h-dvh w-full max-w-md flex-col bg-asha-cream pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] lg:grid lg:max-w-7xl lg:grid-cols-[minmax(24rem,30rem)_1fr] lg:grid-rows-[auto_auto_auto_auto_minmax(0,1fr)] lg:gap-x-10 lg:px-10 lg:pb-8">
+    <div className="mx-auto flex h-dvh w-full max-w-md flex-col bg-asha-cream pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] lg:grid lg:max-w-7xl lg:grid-cols-[minmax(24rem,30rem)_1fr] lg:grid-rows-[auto_auto_auto_auto_auto_minmax(0,1fr)] lg:gap-x-10 lg:px-10 lg:pb-8">
       <header className="flex items-center justify-between gap-3 px-4 pb-2 pt-4 lg:col-span-2 lg:px-0 lg:pt-8">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-asha-teal text-lg font-bold text-white lg:h-14 lg:w-14 lg:text-xl">
@@ -179,26 +194,24 @@ export function VoiceScreen({
       )}
 
       {/* Phone: switch between the conversation and the saved result. Desktop shows both. */}
-      <div role="tablist" aria-label="View" className="mx-4 mb-2 grid grid-cols-2 gap-1 rounded-full bg-asha-sand p-1 text-sm font-bold lg:hidden">
-        {(['talk', 'result'] as const).map((k) => (
-          <button
-            key={k}
-            role="tab"
-            aria-selected={tab === k}
-            onClick={() => setTab(k)}
-            className={cn('relative h-10 rounded-full transition-colors', tab === k ? 'bg-white shadow-sm' : 'text-asha-muted')}
-          >
-            {k === 'talk' ? s.tabTalk : s.tabVisit}
-            {k === 'result' && visit && tab !== 'result' && <span className="absolute right-4 top-2.5 h-2 w-2 rounded-full bg-asha-red" aria-label="new" />}
-          </button>
-        ))}
-      </div>
+      <TabBar
+        ariaLabel="View"
+        idPrefix="phone-tab"
+        className="mx-4 mb-2 grid lg:hidden"
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { key: 'talk', label: s.tabTalk },
+          { key: 'result', label: s.tabVisit, badge: visitDot },
+          { key: 'schedule', label: s.tabSchedule, badge: dueBadge },
+        ]}
+      />
 
       {/* Conversation */}
       <div
         ref={scrollRef}
         className={cn(
-          'min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-2 lg:col-start-1 lg:row-span-2 lg:row-start-4 lg:flex lg:flex-none lg:rounded-3xl lg:border lg:border-asha-line lg:bg-white/60 lg:p-5',
+          'min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-2 lg:col-start-1 lg:row-span-3 lg:row-start-4 lg:flex lg:flex-none lg:rounded-3xl lg:border lg:border-asha-line lg:bg-white/60 lg:p-5',
           tab === 'talk' ? 'flex' : 'hidden',
         )}
         aria-label="Conversation"
@@ -229,11 +242,18 @@ export function VoiceScreen({
       </div>
 
       {/* Orb + controls: bottom dock on phone, centred main stage on desktop */}
-      <div className="order-last flex shrink-0 flex-col items-center gap-4 px-4 pb-6 pt-4 lg:order-none lg:col-start-2 lg:row-start-4 lg:gap-6 lg:pb-4 lg:pt-0">
+      <div
+        className={cn(
+          'order-last flex shrink-0 flex-col items-center gap-4 px-4 pb-6 pt-4 lg:order-none lg:col-start-2 lg:row-start-4 lg:pb-4 lg:pt-0',
+          // Schedule tab (desktop): orb and buttons sit side by side so the list gets the space
+          tab === 'schedule' ? 'lg:flex-row lg:justify-center lg:gap-10 lg:pb-6 lg:pt-2' : 'lg:gap-5',
+        )}
+      >
         <Orb
           state={orbState}
           label={orbLabel(s, orbState)}
           onClick={orbClickable ? onToggleMic : undefined}
+          compact={tab === 'schedule'}
           disabled={!orbClickable}
           ariaLabel={orbState === 'muted' ? 'Unmute microphone' : 'Mute microphone'}
         />
@@ -254,11 +274,37 @@ export function VoiceScreen({
         </div>
       </div>
 
+      {/* Desktop only: switch the right panel between the visit result and the schedule. */}
+      <TabBar
+        ariaLabel="Panel"
+        idPrefix="panel-tab"
+        className="mb-3 hidden lg:col-start-2 lg:row-start-5 lg:grid"
+        value={tab === 'schedule' ? 'schedule' : 'result'}
+        onChange={setTab}
+        tabs={[
+          { key: 'result', label: s.tabVisit, badge: visitDot },
+          { key: 'schedule', label: s.tabSchedule, badge: dueBadge },
+        ]}
+      />
+
+      {/* Planned follow-up visits, grouped by when they are due. */}
+      <div
+        role="tabpanel"
+        aria-label={s.tabSchedule}
+        className={cn(
+          'min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1 lg:col-start-2 lg:row-start-6 lg:flex-none lg:px-0',
+          tab === 'schedule' ? 'block' : 'hidden',
+        )}
+      >
+        <SchedulePanel schedule={schedule} s={s} lang={lang} />
+      </div>
+
       {/* Saved visit: risk, why, alert, follow-up, who is left today. Real data from the database. */}
       <div
+        role="tabpanel"
         className={cn(
-          'min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1 lg:col-start-2 lg:row-start-5 lg:block lg:flex-none lg:px-0',
-          tab === 'result' ? 'block' : 'hidden',
+          'min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1 lg:col-start-2 lg:row-start-6 lg:flex-none lg:px-0',
+          tab === 'result' ? 'block lg:block' : tab === 'schedule' ? 'hidden' : 'hidden lg:block',
         )}
         aria-label="Visit details"
       >
