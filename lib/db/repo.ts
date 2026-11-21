@@ -166,6 +166,31 @@ export async function getVisit(db: Db, ashaId: string, id: string): Promise<Visi
   return rows[0] ? toVisit(rows[0]) : null;
 }
 
+/** Rewrite the measured facts and the rules result of one visit. rules_version comes from the fresh assessment; visited_at and session stay. */
+export async function updateVisitFacts(
+  db: Db,
+  ashaId: string,
+  id: string,
+  v: { gestationWeeks: number | null; bpSys: number | null; bpDia: number | null; hb: number | null; symptoms: string[]; notes: string | null; risk: Risk },
+): Promise<Visit | null> {
+  const rows = await db.query<Row>(
+    `update visits set gestation_weeks = $3, bp_sys = $4, bp_dia = $5, hb = $6, symptoms = $7, notes = $8,
+       risk_level = $9, risk_reasons = $10::jsonb, rules_version = $11
+     where id = $1 and asha_id = $2 returning *`,
+    [id, ashaId, v.gestationWeeks, v.bpSys, v.bpDia, v.hb, [...v.symptoms].sort(), v.notes, v.risk.level, JSON.stringify(v.risk.reasons), v.risk.rulesVersion],
+  );
+  return rows[0] ? toVisit(rows[0]) : null;
+}
+
+/** Make every unsent alert (draft or failed) of a visit unsendable, so a stale message cannot go out after a correction. Returns how many. */
+export async function expireUnsentAlertsForVisit(db: Db, visitId: string): Promise<number> {
+  const rows = await db.query<Row>(
+    `update alerts set expires_at = now() - interval '1 second' where visit_id = $1 and status in ('draft', 'failed') and expires_at > now() returning id`,
+    [visitId],
+  );
+  return rows.length;
+}
+
 export async function recentVisits(db: Db, beneficiaryId: string, limit = 3): Promise<Visit[]> {
   const rows = await db.query<Row>('select * from visits where beneficiary_id = $1 order by visited_at desc limit $2', [beneficiaryId, limit]);
   return rows.map(toVisit);

@@ -46,6 +46,13 @@ export const RecordVisitInput = z
   .refine(bpOrdered, { message: 'bpSys must be higher than bpDia' });
 export type RecordVisitInput = z.infer<typeof RecordVisitInput>;
 
+/** Corrections to the visit just saved: only the fields she names. `symptoms`, when given, replaces the saved list. */
+export const AmendVisitInput = z
+  .object({ ...visitShape, symptoms: z.array(Symptom).max(12).optional().describe('The full corrected list of symptoms (replaces the saved list)') })
+  .refine((v) => Object.values(v).some((x) => x !== undefined), { message: 'Name at least one value to correct' })
+  .refine(bpOrdered, { message: 'bpSys must be higher than bpDia' });
+export type AmendVisitInput = z.infer<typeof AmendVisitInput>;
+
 export const BeneficiaryProfile = z.object({
   age: z.number().int().min(10).max(60).nullable().optional(),
   parity: z.number().int().min(0).max(20).nullable().optional(),

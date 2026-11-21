@@ -4,7 +4,7 @@ import type { Db } from '@/lib/db/client';
 import { insertBeneficiary, listEvents } from '@/lib/db/repo';
 import type { Notifier } from '@/lib/notify';
 import { executeTool, TOOLS, TOOL_NAMES, type ToolContext } from '@/lib/tools';
-import { draftAlert, findBeneficiary, getBeneficiaryHistory, recordVisit, scheduleFollowUp, sendAlert, todaySummary, weeksFromLmp } from './tools';
+import { amendLastVisit, draftAlert, findBeneficiary, getBeneficiaryHistory, recordVisit, scheduleFollowUp, sendAlert, todaySummary, weeksFromLmp } from './tools';
 
 let db: Db & { close: () => Promise<void> };
 let ashaId: string;
@@ -45,7 +45,7 @@ afterAll(async () => db.close());
 describe('tool registry', () => {
   it('has unique, camelCase names that match what the agent will be told', () => {
     expect(new Set(TOOL_NAMES).size).toBe(TOOLS.length);
-    expect(TOOL_NAMES).toEqual(['findBeneficiary', 'getBeneficiaryHistory', 'recordVisit', 'scheduleFollowUp', 'todaySummary', 'draftAlert', 'sendAlert', 'searchGuidelines']);
+    expect(TOOL_NAMES).toEqual(['findBeneficiary', 'getBeneficiaryHistory', 'recordVisit', 'amendLastVisit', 'scheduleFollowUp', 'todaySummary', 'draftAlert', 'sendAlert', 'searchGuidelines']);
   });
 });
 
@@ -240,3 +240,116 @@ describe('weeksFromLmp', () => {
 });
 
 sent = [];
+
+describe('amendLastVisit', () => {
+  let n = 0;
+  /** A fresh mother and a fresh call per case, so cases never share visits or alerts. */
+  async function setup(visit: { bpSys?: number; bpDia?: number; hb?: number; symptoms?: string[] }) {
+    n += 1;
+    const b = await insertBeneficiary(db, { ashaId, name: `Amend Mother ${n}`, village: 'Amendpur', age: 26, parity: 1 });
+    const c = ctx({ sessionId: `amend-call-${n}` });
+    const r = await executeTool(recordVisit, { beneficiaryId: b.id, gestationWeeks: 28, symptoms: [], ...visit } as never, c);
+    if (!r.ok) throw new Error('setup failed');
+    return { c, visitId: r.data.visitId, level: r.data.risk.level };
+  }
+  const row = async (id: string) => (await db.query<Record<string, unknown>>('select * from visits where id = $1', [id]))[0];
+
+  it.each([
+    { name: 'lowering BP from high to normal', first: { bpSys: 150, bpDia: 100 }, fix: { bpSys: 118, bpDia: 76 }, from: 'high', to: 'normal', bp: '118/76' },
+    { name: 'raising BP from normal to high', first: { bpSys: 118, bpDia: 76 }, fix: { bpSys: 150, bpDia: 100 }, from: 'normal', to: 'high', bp: '150/100' },
+    { name: 'BP 140 by 90 (the demo correction)', first: { bpSys: 150, bpDia: 100 }, fix: { bpSys: 140, bpDia: 90 }, from: 'high', to: 'high', bp: '140/90' },
+  ])('$name', async ({ first, fix, from, to, bp }) => {
+    const { c, visitId, level } = await setup(first);
+    expect(level).toBe(from);
+    const r = await executeTool(amendLastVisit, fix, c);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.data.visitId).toBe(visitId);
+    expect(r.data.risk.level).toBe(to);
+    expect(r.data.previousRiskLevel).toBe(from);
+    expect(r.data.riskChanged).toBe(from !== to);
+    expect(r.data.vitals.bp).toBe(bp);
+    const v = await row(visitId);
+    expect(v.risk_level).toBe(to);
+    expect(v.rules_version).toBe(r.data.risk.rulesVersion);
+  });
+
+  it('changes only the fields she names', async () => {
+    const { c, visitId } = await setup({ bpSys: 150, bpDia: 100, hb: 9.5, symptoms: ['swelling_feet'] });
+    const r = await executeTool(amendLastVisit, { hb: 7.5 }, c);
+    expect(r.ok && r.data.corrected).toEqual(['hb']);
+    const v = await row(visitId);
+    expect([v.bp_sys, v.bp_dia, Number(v.hb), v.symptoms, v.gestation_weeks]).toEqual([150, 100, 7.5, ['swelling_feet'], 28]);
+  });
+
+  it('refuses when nothing was saved in this call', async () => {
+    const r = await executeTool(amendLastVisit, { bpSys: 120, bpDia: 80 }, ctx({ sessionId: 'amend-empty-call' }));
+    expect(!r.ok && r.code).toBe('NO_VISIT_IN_CALL');
+  });
+
+  it('refuses a visit from another call, another ASHA, or no call', async () => {
+    const { visitId } = await setup({ bpSys: 150, bpDia: 100 });
+    for (const over of [{ sessionId: 'some-other-call' }, { ashaId: otherAshaId, sessionId: `amend-call-${n}` }, { sessionId: null }]) {
+      const r = await executeTool(amendLastVisit, { bpSys: 120, bpDia: 80 }, ctx(over));
+      expect(!r.ok && r.code).toBe('NO_VISIT_IN_CALL');
+    }
+    expect((await row(visitId)).bp_sys).toBe(150);
+  });
+
+  it('does not touch older visits of the same mother', async () => {
+    const { c, visitId } = await setup({ bpSys: 150, bpDia: 100 });
+    const old = await db.query<{ id: string }>(
+      `insert into visits (asha_id, beneficiary_id, session_id, bp_sys, bp_dia, symptoms, risk_level, risk_reasons, rules_version, visited_at)
+       select asha_id, beneficiary_id, 'old-call', 110, 70, '{}', 'normal', '[]'::jsonb, 'anc.v1', now() - interval '3 days' from visits where id = $1 returning id`,
+      [visitId],
+    );
+    await executeTool(amendLastVisit, { bpSys: 130, bpDia: 85 }, c);
+    expect((await row(old[0].id)).bp_sys).toBe(110);
+    expect((await row(visitId)).bp_sys).toBe(130);
+  });
+
+  it('does not resend an alert that was already sent, and says so', async () => {
+    const { c, visitId } = await setup({ bpSys: 150, bpDia: 100 });
+    await executeTool(draftAlert, { visitId }, c);
+    const s = await executeTool(sendAlert, {}, c);
+    expect(s.ok && s.data.status).toBe('sent');
+    const before = sent.length;
+    const r = await executeTool(amendLastVisit, { bpSys: 118, bpDia: 76 }, c);
+    expect(r.ok && r.data.alert).toBe('already_sent');
+    expect(r.ok && r.data.riskChanged).toBe(true);
+    expect(r.ok && r.data.nextStep).toMatch(/already alerted with the OLD values/);
+    expect(sent).toHaveLength(before);
+    const alerts = await db.query<{ status: string }>('select status from alerts where visit_id = $1', [visitId]);
+    expect(alerts.map((a) => a.status)).toEqual(['sent']);
+  });
+
+  it('invalidates an unsent draft so the old numbers cannot go out', async () => {
+    const { c, visitId } = await setup({ bpSys: 150, bpDia: 100 });
+    const d = await executeTool(draftAlert, { visitId }, c);
+    const token = d.ok && !d.data.alreadySent ? d.data.token : '';
+    const before = sent.length;
+    const r = await executeTool(amendLastVisit, { bpSys: 142, bpDia: 92 }, c);
+    expect(r.ok && r.data.alert).toBe('draft_cancelled');
+    const stale = await executeTool(sendAlert, { token }, c);
+    expect(!stale.ok && stale.code).toBe('EXPIRED');
+    expect(sent).toHaveLength(before);
+    // A fresh draft carries the corrected numbers.
+    const d2 = await executeTool(draftAlert, { visitId }, c);
+    expect(d2.ok && !d2.data.alreadySent && d2.data.preview).toContain('BP 142/92');
+  });
+
+  it.each([
+    { name: 'no fields at all', input: {}, code: 'BAD_INPUT' },
+    { name: 'BP out of range', input: { bpSys: 999, bpDia: 90 }, code: 'BAD_INPUT' },
+    { name: 'BP upper below lower', input: { bpSys: 80, bpDia: 90 }, code: 'BAD_INPUT' },
+    { name: 'unknown symptom', input: { symptoms: ['headache'] }, code: 'BAD_INPUT' },
+    { name: 'Hb out of range', input: { hb: 40 }, code: 'BAD_INPUT' },
+    { name: 'one BP number that breaks the saved one', input: { bpSys: 85 }, code: 'BP_ORDER' },
+  ])('rejects $name and changes nothing', async ({ input, code }) => {
+    const { c, visitId } = await setup({ bpSys: 150, bpDia: 100 });
+    const r = await executeTool(amendLastVisit, input, c);
+    expect(!r.ok && r.code).toBe(code);
+    const v = await row(visitId);
+    expect([v.bp_sys, v.bp_dia, v.risk_level]).toEqual([150, 100, 'high']);
+  });
+});

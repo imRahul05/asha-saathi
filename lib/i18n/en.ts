@@ -154,7 +154,7 @@ export const en = {
   recordedIn: (n: number) => `Recorded in ${n} s`,
   recordedInHelp: 'from your first words to the saved visit',
   goodToKnow: 'What Saathi cannot do',
-  cant: ['It does not diagnose.', 'It does not suggest medicines or doses.', 'It cannot change a saved visit yet.', 'It cannot add new mothers yet.', 'It is not connected to government systems: the data here is a demo.', 'It covers pregnancy visits only for now.'],
+  cant: ['It does not diagnose.', 'It does not suggest medicines or doses.', 'It cannot add new mothers yet.', 'It is not connected to government systems: the data here is a demo.', 'It covers pregnancy visits only for now.'],
 };
 
 export type Strings = typeof en;

@@ -104,6 +104,12 @@ From `types/conversation.ts` (high-use):
 - Tool `searchGuidelines({ query })` (8th MCP tool). `query` is 3 to 200 characters of English keywords. Returns `{ found: true, rules, passages: [{ source, page, text }] }` or `{ found: false, hint }`. Passages come from `kb_chunks` (verbatim official quotes). A passage must match at least two content words of the query, so off-topic questions return nothing.
 - `pnpm kb:verify` (quotes vs official PDFs), `pnpm kb:check` (retrieval questions, embedded Postgres), `pnpm kb:ingest` (idempotent load).
 
+## Correcting a visit
+
+- Tool `amendLastVisit({ bpSys?, bpDia?, hb?, gestationWeeks?, symptoms?, notes? })` (9th MCP tool). At least one field; only named fields change (`symptoms` replaces the list). It targets only the latest visit of the current call (`ctx.sessionId`) and the signed-in ASHA, else `NO_VISIT_IN_CALL`. BP must stay complete and ordered after merging (`BP_INCOMPLETE`, `BP_ORDER`).
+- The risk is recomputed by `assessAnc` on the merged values (`rules_version` follows the engine); the model never sets it. Result: `{ visitId, corrected, vitals, previousRiskLevel, riskChanged, risk, alert, nextStep }`.
+- `alert`: `already_sent` (a sent alert is never resent; the agent says the doctor has the old values and offers a new alert only if `riskChanged`), `draft_cancelled` (unsent draft or failed alert is expired so the old message cannot be sent; `draftAlert` builds a fresh one), or `none`.
+
 ## Doctor call routes
 
 - `GET /api/call/link?visit=<id>` (session required): returns signed `asha` and `doctor` call URLs for one of the signed-in ASHA's visits.
