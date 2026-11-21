@@ -106,7 +106,7 @@ export async function getSnapshot(db: Db, opts: { sessionId?: string | null; ash
   const targetId = opts.ashaId ?? (opts.sessionId ? null : await mostRecentlyActiveAshaId(db));
   const asha = (targetId ? await getAsha(db, targetId) : null) ?? (opts.ashaId ? null : await firstAsha(db));
   if (!asha) {
-    return { asha: null, counts: { visits: 0, highRisk: 0, alertsSent: 0, followUps: 0 }, visit: null, events: [], remaining: [], serverTime: new Date().toISOString(), cursor: 0 };
+    return { asha: null, counts: { visits: 0, highRisk: 0, alertsSent: 0, followUps: 0 }, visit: null, events: [], remaining: [], schedule: [], serverTime: new Date().toISOString(), cursor: 0 };
   }
   const visit = await latestVisit(db, { sessionId: opts.sessionId ?? null, ashaId: asha.id });
   let events = await listEvents(db, { sessionId: opts.sessionId ?? null, ashaId: asha.id, limit: 200 });
@@ -124,6 +124,7 @@ export async function getSnapshot(db: Db, opts: { sessionId?: string | null; ash
     visit: snapVisit,
     events: events.map(toEvent),
     remaining,
+    schedule: [], // filled by the schedule backend
     serverTime: new Date().toISOString(),
     cursor,
   };

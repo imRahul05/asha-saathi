@@ -1,6 +1,9 @@
 // DEV ONLY. Used by the design preview at /preview (disabled in production). Never imported by real screens.
 import type { Snapshot } from '@/lib/snapshot-types';
 
+/** A YYYY-MM-DD date `n` days from today (sample data for the dev preview). */
+const dayFromToday = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+
 export const DEV_SNAPSHOT: Snapshot = {
   asha: { name: 'Meena Kumari', phcName: 'Kolar PHC', language: 'hi' },
   counts: { visits: 1, highRisk: 1, alertsSent: 1, followUps: 1 },
@@ -30,6 +33,13 @@ export const DEV_SNAPSHOT: Snapshot = {
     { name: 'Lakshmi B', village: 'Hosahalli', status: 'Watch' },
     { name: 'Asha Rani', village: 'Narsapura', status: 'Normal' },
     { name: 'Pooja K', village: 'Malur', status: 'Pending' },
+  ],
+  schedule: [
+    { id: 'f1', dueDate: dayFromToday(-2), beneficiary: { name: 'Sunita Devi', village: 'Narsapura' }, reason: 'recheck BP', status: 'overdue' },
+    { id: 'f2', dueDate: dayFromToday(0), beneficiary: { name: 'Lakshmi B', village: 'Hosahalli' }, reason: 'iron tablets check', status: 'today' },
+    { id: 'f3', dueDate: dayFromToday(1), beneficiary: { name: 'Asha Rani', village: 'Narsapura' }, reason: null, status: 'upcoming' },
+    { id: 'f4', dueDate: dayFromToday(3), beneficiary: { name: 'Pooja K', village: 'Malur' }, reason: 'recheck fever', status: 'upcoming' },
+    { id: 'f5', dueDate: dayFromToday(8), beneficiary: { name: 'Meena S', village: 'Kolar' }, reason: 'ANC visit 3', status: 'upcoming' },
   ],
   serverTime: new Date().toISOString(),
   cursor: 4,

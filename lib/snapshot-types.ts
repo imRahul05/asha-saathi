@@ -24,6 +24,16 @@ export type SnapshotVisit = {
 
 export type SnapshotEvent = { id: number; name: string; ok: boolean; ms: number | null; note: string; at: string };
 
+/** One planned follow-up visit of this ASHA. `status` is computed on the server against today's date in India (Asia/Kolkata). */
+export type SnapshotScheduleItem = {
+  id: string;
+  /** YYYY-MM-DD */
+  dueDate: string;
+  beneficiary: { name: string; village: string | null };
+  reason: string | null;
+  status: 'overdue' | 'today' | 'upcoming';
+};
+
 export type SnapshotRemaining = { name: string; village: string | null; status: 'High' | 'Watch' | 'Normal' | 'Pending' };
 
 export type Snapshot = {
@@ -32,6 +42,8 @@ export type Snapshot = {
   visit: SnapshotVisit | null;
   events: SnapshotEvent[];
   remaining: SnapshotRemaining[];
+  /** Pending follow-ups of this ASHA: overdue ones and the next 60 days, earliest first, at most 50. Empty until the backend fills it. */
+  schedule: SnapshotScheduleItem[];
   serverTime: string;
   /** Highest event id seen. Send it back as ?since= to get a tiny "unchanged" answer when nothing happened. */
   cursor: number;
