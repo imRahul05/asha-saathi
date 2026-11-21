@@ -135,7 +135,7 @@ Deployment notes learned the hard way: (1) the functions run in **Mumbai (`bom1`
 ### Checks
 
 ```bash
-pnpm test            # 99 tests: rules, tools + database (embedded Postgres), MCP over JSON-RPC, snapshots
+pnpm test            # tests: rules, tools + database (embedded Postgres), MCP over JSON-RPC, snapshots
 pnpm typecheck
 pnpm verify:mcp https://<your-app> $MCP_SHARED_SECRET           # read-only check of a running server
 pnpm verify:mcp https://<your-app> $MCP_SHARED_SECRET --write   # also records a visit and sends one alert (creates data)
@@ -159,7 +159,7 @@ pnpm demo:reset --yes --force         # same, even if an agent started in the la
 | Path | What it is |
 |---|---|
 | `lib/rules/anc.v1.ts` | the risk rules (pure, tested) with cited or pending evidence per rule |
-| `lib/tools/` | the 9 tools the agent can call (find, history, record, `amendLastVisit`, follow-up, today, draft and send alert, guideline search), and the registry both the server and the agent share |
+| `lib/tools/` | the 11 tools the agent can call (find, history, record, `amendLastVisit`, `holdAlert`, follow-up, today, `upcomingVisits`, draft and send alert, guideline search), and the registry both the server and the agent share |
 | `app/api/mcp/route.ts` | the MCP tool server Agora's model calls (Bearer secret, scoped to one ASHA and one call) |
 | `app/api/invite-agent/route.ts` | starts the voice agent (managed speech + model, Murf voice, our tools) |
 | `lib/db/`, `db/schema.sql` | database client (Neon or local Postgres), repository, schema |

@@ -271,6 +271,7 @@ export function defineTool<I extends z.ZodTypeAny, O extends z.ZodTypeAny>(def: 
 | `sendAlert` | **external** | `{ token }` → `{ status, providerId }` | Phase 2. Unique `idempotency_key`. Only valid after a draft exists and less than 10 min have passed. |
 | `scheduleFollowUp` | writes DB | `{ beneficiaryId, inDays (1–30), reason }` → `{ followUpId, dueDate }` | |
 | `todaySummary` | – | `{}` → counts + pending follow-ups | "Aaj ka kaam?" ("What's on today?") |
+| `upcomingVisits` | – | `{ days? (1–30, default 7) }` → `{ count, visits[{name,village,dueDate,when,reason}], hint }` | "Kal ka kaam?" Overdue plus the next days, this ASHA only. |
 
 **Why two-phase instead of AI SDK `needsApproval`:**
 - ✅ VERIFIED-CODE: `needsApproval` exists in v6.

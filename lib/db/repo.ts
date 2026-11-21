@@ -260,7 +260,7 @@ export async function insertFollowUp(
 ): Promise<FollowUp> {
   const rows = await db.query<Row>(
     `insert into followups (asha_id, beneficiary_id, visit_id, due_date, reason)
-     values ($1,$2,$3, (current_date + $4::int), $5) returning *`,
+     values ($1,$2,$3, ((now() at time zone 'Asia/Kolkata')::date + $4::int), $5) returning *`,
     [f.ashaId, f.beneficiaryId, f.visitId ?? null, f.inDays, f.reason ?? null],
   );
   return toFollowUp(rows[0]);
@@ -270,9 +270,29 @@ export async function pendingFollowUps(db: Db, ashaId: string, withinDays = 7): 
   const rows = await db.query<Row>(
     `select f.*, b.name as beneficiary_name, b.village from followups f
      join beneficiaries b on b.id = f.beneficiary_id
-     where f.asha_id = $1 and f.status = 'pending' and f.due_date <= current_date + $2::int
+     where f.asha_id = $1 and f.status = 'pending' and f.due_date <= (now() at time zone 'Asia/Kolkata')::date + $2::int
      order by f.due_date asc`,
     [ashaId, withinDays],
+  );
+  return rows.map((r) => ({ ...toFollowUp(r), beneficiaryName: String(r.beneficiary_name), village: (r.village as string) ?? null }));
+}
+
+/**
+ * Pending follow-ups of this ASHA that are overdue (before `today`) or due within `days` days, earliest first.
+ * `today` is YYYY-MM-DD in Asia/Kolkata. Scoped to the ASHA through both the follow-up and the mother.
+ */
+export async function upcomingFollowUps(
+  db: Db,
+  ashaId: string,
+  opts: { today: string; days: number },
+): Promise<Array<FollowUp & { beneficiaryName: string; village: string | null }>> {
+  const rows = await db.query<Row>(
+    `select f.*, b.name as beneficiary_name, b.village from followups f
+     join beneficiaries b on b.id = f.beneficiary_id and b.asha_id = $1
+     where f.asha_id = $1 and f.status = 'pending' and f.due_date <= $2::date + $3::int
+     order by f.due_date asc, b.name asc
+     limit 50`,
+    [ashaId, opts.today, opts.days],
   );
   return rows.map((r) => ({ ...toFollowUp(r), beneficiaryName: String(r.beneficiary_name), village: (r.village as string) ?? null }));
 }

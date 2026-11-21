@@ -130,6 +130,7 @@ scripts/verify-mcp.mjs   JSON-RPC contract test for /api/mcp (401 without secret
 | Task | Who |
 |---|---|
 | `lib/notify/{types,twilio,console}.ts`, `draftAlert`/`sendAlert` two-phase with idempotency, `scheduleFollowUp` | **[CLAUDE]** |
+| Schedule data side: `upcomingFollowUps` (repo), `Snapshot.schedule` (overdue/today/upcoming, Asia/Kolkata), voice tool `upcomingVisits` ("kal ka kaam") | **[CLAUDE]** (done) |
 | Join the Twilio sandbox from your phone (and the "doctor" phone); test a real send | **[LOCAL P-11]** |
 
 **Done when:** you say "haan bhej do" ("yes, send it"), exactly one WhatsApp arrives with the Hindi alert, a repeated "haan" sends nothing new, and the follow-up appears on the dashboard.

@@ -1,6 +1,7 @@
 import type { Db } from '@/lib/db/client';
-import { alertsForVisit, eventsCursor, firstAsha, getAsha, latestVisit, listEvents, mostRecentlyActiveAshaId, todayCounts, type EventRow, type Visit } from '@/lib/db/repo';
-import type { Snapshot, SnapshotEvent, SnapshotRemaining, SnapshotVisit } from '@/lib/snapshot-types';
+import { alertsForVisit, eventsCursor, firstAsha, getAsha, latestVisit, listEvents, mostRecentlyActiveAshaId, todayCounts, upcomingFollowUps, type EventRow, type Visit } from '@/lib/db/repo';
+import { daysBetween, todayInIndia } from '@/lib/dates';
+import type { Snapshot, SnapshotEvent, SnapshotRemaining, SnapshotScheduleItem, SnapshotVisit } from '@/lib/snapshot-types';
 
 type Row = Record<string, unknown>;
 
@@ -111,12 +112,20 @@ export async function getSnapshot(db: Db, opts: { sessionId?: string | null; ash
   const visit = await latestVisit(db, { sessionId: opts.sessionId ?? null, ashaId: asha.id });
   let events = await listEvents(db, { sessionId: opts.sessionId ?? null, ashaId: asha.id, limit: 200 });
   events = events.slice(-12);
-  const [cursor, counts, remaining, snapVisit] = await Promise.all([
+  const today = todayInIndia();
+  // Cache note: the screens poll with ?since=<cursor>. Creating a follow-up goes through executeTool, which logs an
+  // event, so the cursor moves and the schedule is rebuilt. (A date rollover alone does not move it.)
+  const [cursor, counts, remaining, snapVisit, due] = await Promise.all([
     eventsCursor(db, { sessionId: opts.sessionId ?? null, ashaId: asha.id }),
     todayCounts(db, asha.id),
     remainingToday(db, asha.id),
     visit ? toSnapshotVisit(db, visit, { doctor: asha.doctorName, phc: asha.phcName }) : Promise.resolve(null),
+    upcomingFollowUps(db, asha.id, { today, days: 60 }),
   ]);
+  const schedule: SnapshotScheduleItem[] = due.map((f) => {
+    const d = daysBetween(today, f.dueDate);
+    return { id: f.id, dueDate: f.dueDate, beneficiary: { name: f.beneficiaryName, village: f.village }, reason: f.reason, status: d < 0 ? 'overdue' : d === 0 ? 'today' : 'upcoming' };
+  });
   const toEvent = (e: EventRow): SnapshotEvent => ({ id: e.id, name: e.name, ok: e.ok, ms: e.ms, note: describeEvent(e), at: e.createdAt });
   return {
     asha: { name: asha.name, phcName: asha.phcName, language: asha.language },
@@ -124,7 +133,7 @@ export async function getSnapshot(db: Db, opts: { sessionId?: string | null; ash
     visit: snapVisit,
     events: events.map(toEvent),
     remaining,
-    schedule: [], // filled by the schedule backend
+    schedule,
     serverTime: new Date().toISOString(),
     cursor,
   };

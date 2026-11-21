@@ -42,7 +42,7 @@ export type Snapshot = {
   visit: SnapshotVisit | null;
   events: SnapshotEvent[];
   remaining: SnapshotRemaining[];
-  /** Pending follow-ups of this ASHA: overdue ones and the next 60 days, earliest first, at most 50. Empty until the backend fills it. */
+  /** Pending follow-ups of this ASHA: overdue ones and the next 60 days, earliest first, at most 50. */
   schedule: SnapshotScheduleItem[];
   serverTime: string;
   /** Highest event id seen. Send it back as ?since= to get a tiny "unchanged" answer when nothing happened. */
