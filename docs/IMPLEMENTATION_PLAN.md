@@ -20,7 +20,7 @@
 | 3 RAG | **Done** (keyword search over verified quotes; no embeddings). `searchGuidelines` tool, `kb_chunks` table, `kb:verify` / `kb:ingest` / `kb:check`. Live-tested in English and Hindi through Agora. |
 | 4 Execute + follow-up | Done: two-phase alert, idempotent send, follow-ups. Delivery chain Telegram, then WhatsApp, then SMS (`NOTIFIER=multi`); Telegram verified on a real phone. The result card has an alert bar with Send now / Try again / Talk to the doctor. |
 | 5 Dashboard UI | Done and live: voice screen, result panel, alert and follow-up, projector dashboard, all reading the database. Call transcript on the dashboard is not built. |
-| 6-7 Harden, rehearse | Partly: safety rules, usage guard, session handling, caption watchdog done. Still open: reset/warm-up scripts, `amendLastVisit`, full phone rehearsal, backup video, pitch script. |
+| 6-7 Harden, rehearse | Partly: safety rules, usage guard, session handling, caption watchdog done. `amendLastVisit` done. Still open: reset/warm-up scripts, full phone rehearsal, backup video, pitch script. |
 | Extra: recording guide | Done: "What I can record" hints and example, a checklist of what was picked up (BP, Hb, weeks, symptoms; missing items highlighted), time from first words to saved visit, and a collapsed list of what Saathi cannot do, in all nine languages. |
 | Extra: languages | Done (PR 4): per-call picker, 9 languages + Auto (beta). Live-tested English, Tamil, Gujarati, Malayalam; Hindi and Kannada earlier. |
 | Extra: doctor voice call | Done: signed link in the alert, browser audio call over Agora RTC (`/call/[t]`), ASHA "call doctor" button. Tested with two browsers on prod. |
@@ -31,7 +31,7 @@
 |---|---|
 | Guideline coverage | Six official documents, 54 passages. Thin on: diet detail for specific conditions, postnatal and newborn care, danger signs in the first trimester. Questions on these return "ask the MO". The source-chip on screen only appears on the result card of a visit. |
 | Admin screen (register mothers, set doctor phone) | Demo data is cloned from a seed; a real ASHA cannot add mothers. |
-| `amendLastVisit` | A wrong value can only be fixed by recording again. |
+| ~~`amendLastVisit`~~ | Done: corrects the visit saved in the current call, re-runs the rules, never resends a sent alert. |
 | Real accounts (Neon Auth) | Only one-click demo sign-in exists. |
 | Dashboard call transcript | Not built. |
 | Doctor call extras | No AI transcript or summary of the doctor call; no record on the dashboard that a call happened; links cannot be revoked (they expire after 6 hours); the SMS fallback text has no link (too long). |
@@ -185,7 +185,7 @@ scripts/verify-mcp.mjs   JSON-RPC contract test for /api/mcp (401 without secret
 ## Cut list (drop from the top first)
 
 1. `@ui-sdk/react` polish
-2. `amendLastVisit`
+2. ~~`amendLastVisit`~~ (done)
 3. Vector search + the AI Gateway embeddings (keep keyword-only RAG, which still cites sources)
 4. `todaySummary`
 5. **Never cut:** Hindi voice in/out via Agora + Murf, `recordVisit` + the rules engine, one cited RAG answer, one confirmed WhatsApp alert, the live dashboard card.

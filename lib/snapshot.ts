@@ -12,6 +12,10 @@ export function describeEvent(e: Pick<EventRow, 'name' | 'ok' | 'input' | 'outpu
   switch (e.name) {
     case 'findBeneficiary': return `“${String(inp.name ?? '')}” → ${Number(out.count ?? 0)} match${out.count === 1 ? '' : 'es'}`;
     case 'recordVisit': return `risk: ${String((out.risk as { level?: string } | undefined)?.level ?? '')}${out.duplicate ? ' (already saved)' : ''}`;
+    case 'amendLastVisit': {
+      const alert = out.alert === 'already_sent' ? ', alert already sent with old values' : out.alert === 'draft_cancelled' ? ', old draft cancelled' : '';
+      return `corrected, risk: ${String((out.risk as { level?: string } | undefined)?.level ?? '')}${alert}`;
+    }
     case 'draftAlert': return out.alreadySent ? 'already sent' : 'draft ready, waiting for “haan”';
     case 'sendAlert': return out.alreadySent ? 'already sent' : `sent via ${String(out.provider ?? '')}`;
     case 'scheduleFollowUp': return `+${String(inp.inDays ?? '')} days`;

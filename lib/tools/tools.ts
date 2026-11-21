@@ -1,12 +1,12 @@
 import { randomInt } from 'node:crypto';
 import { z } from 'zod';
 import { assessAnc } from '@/lib/rules/anc.v1';
-import { RecordVisitInput, Uuid, type Risk } from '@/lib/schemas';
+import { AmendVisitInput, RecordVisitInput, Uuid, type Risk, type Symptom } from '@/lib/schemas';
 import { composeAlertMessage, composeSmsText } from '@/lib/alerts/message';
 import { callUrl } from '@/lib/call/link';
 import {
   alertsForVisit, claimAlertForSending, findBeneficiaries, findRecentDuplicateVisit, getAlertByToken, getAsha, getBeneficiary,
-  getVisit, insertAlertDraft, insertFollowUp, insertVisit, latestOpenAlertForAsha, markAlertFailed, markAlertSent, pendingFollowUps, recentVisits, todayCounts,
+  expireUnsentAlertsForVisit, getVisit, insertAlertDraft, latestVisit, updateVisitFacts, insertFollowUp, insertVisit, latestOpenAlertForAsha, markAlertFailed, markAlertSent, pendingFollowUps, recentVisits, todayCounts,
   type Beneficiary,
 } from '@/lib/db/repo';
 import { defineTool, ToolError, type ToolContext } from './define';
@@ -121,6 +121,63 @@ export const recordVisit = defineTool({
         : risk.level === 'watch'
           ? 'Tell the ASHA it needs watching and suggest a follow-up visit (scheduleFollowUp).'
           : 'Tell the ASHA the visit is saved and all looks normal.',
+    };
+  },
+});
+
+export const amendLastVisit = defineTool({
+  name: 'amendLastVisit',
+  description:
+    'Correct the visit you just saved in this call when the ASHA says a value was wrong ("no, BP was 140 by 90"). Pass ONLY the fields she corrected; everything else stays. The risk level is recalculated by the fixed rules, report it exactly as returned. Works only on the latest visit of this call, never on older visits.',
+  input: AmendVisitInput,
+  async run(input, ctx) {
+    const last = ctx.sessionId ? await latestVisit(ctx.db, { sessionId: ctx.sessionId, ashaId: ctx.ashaId }) : null;
+    if (!last) {
+      throw new ToolError('NO_VISIT_IN_CALL', 'इस कॉल में अभी कोई visit सेव नहीं हुई है।', 'Nothing was saved in this call, so there is nothing to correct. Use recordVisit instead. Older visits cannot be changed.');
+    }
+    const b = await mustBeneficiary(ctx, last.beneficiaryId);
+    const merged = {
+      gestationWeeks: input.gestationWeeks ?? last.gestationWeeks ?? undefined,
+      bpSys: input.bpSys ?? last.bpSys ?? undefined,
+      bpDia: input.bpDia ?? last.bpDia ?? undefined,
+      hb: input.hb ?? last.hb ?? undefined,
+      symptoms: (input.symptoms ?? last.symptoms) as Symptom[],
+      notes: input.notes ?? last.notes ?? undefined,
+    };
+    if ((merged.bpSys === undefined) !== (merged.bpDia === undefined)) {
+      throw new ToolError('BP_INCOMPLETE', 'BP के दोनों नंबर चाहिए।', 'Ask the ASHA for both the upper and the lower BP number.');
+    }
+    if (merged.bpSys !== undefined && merged.bpDia !== undefined && merged.bpSys <= merged.bpDia) {
+      throw new ToolError('BP_ORDER', 'BP का ऊपर वाला नंबर नीचे वाले से बड़ा होना चाहिए।', 'With the saved value the upper BP is not higher than the lower. Ask her to repeat both numbers.');
+    }
+    const risk = assessAnc(merged, { age: b.age, parity: b.parity });
+    const visit = await updateVisitFacts(ctx.db, ctx.ashaId, last.id, {
+      gestationWeeks: merged.gestationWeeks ?? null, bpSys: merged.bpSys ?? null, bpDia: merged.bpDia ?? null, hb: merged.hb ?? null,
+      symptoms: merged.symptoms, notes: merged.notes ?? null, risk,
+    });
+    if (!visit) throw new ToolError('NOT_FOUND', 'यह visit नहीं मिली।');
+    const alerts = await alertsForVisit(ctx.db, visit.id);
+    const alreadySent = alerts.some((a) => a.status === 'sent');
+    // A draft written from the old numbers must never be sendable. Sent alerts are history and stay untouched.
+    const expiredDrafts = alreadySent ? 0 : await expireUnsentAlertsForVisit(ctx.db, visit.id);
+    const riskChanged = visit.riskLevel !== last.riskLevel;
+    const serious = visit.riskLevel === 'high' || visit.riskLevel === 'urgent';
+    return {
+      visitId: visit.id,
+      corrected: (Object.keys(input) as string[]).filter((k) => (input as Record<string, unknown>)[k] !== undefined),
+      weeks: visit.gestationWeeks,
+      vitals: { bp: visit.bpSys != null ? `${visit.bpSys}/${visit.bpDia}` : null, hb: visit.hb, symptoms: visit.symptoms },
+      previousRiskLevel: last.riskLevel,
+      riskChanged,
+      risk: riskForModel({ level: visit.riskLevel, reasons: visit.riskReasons, rulesVersion: visit.rulesVersion }),
+      alert: alreadySent ? ('already_sent' as const) : expiredDrafts > 0 ? ('draft_cancelled' as const) : ('none' as const),
+      nextStep: alreadySent
+        ? `Read the corrected numbers back and give the new risk level. Tell her the doctor was already alerted with the OLD values. ${riskChanged ? 'The risk level changed, so offer to send a new alert only if she wants it.' : 'The risk level did not change, so do not offer a new alert.'} Never send twice on your own.`
+        : expiredDrafts > 0
+          ? 'Read the corrected numbers back and give the new risk level. The earlier alert draft was cancelled because it had the old values. If the risk is high or urgent, ask if she wants the doctor alerted, then draftAlert again.'
+          : serious
+            ? 'Read the corrected numbers back and give the new risk level and main reason. If she has not alerted the doctor yet, ask if she wants it (draftAlert).'
+            : 'Read the corrected numbers back and give the new risk level.',
     };
   },
 });

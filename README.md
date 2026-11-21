@@ -30,7 +30,7 @@ Browser (mic + speaker) ── Agora RTC ──> Agora Conversational AI
 
 Why it is built this way:
 
-- **The AI never decides risk.** `recordVisit` runs a deterministic, unit-tested rules function. The model only listens, speaks and calls tools. It cannot change a risk level.
+- **The AI never decides risk.** `recordVisit` runs a deterministic, unit-tested rules function. The model only listens, speaks and calls tools. It cannot change a risk level. `amendLastVisit` fixes a wrongly recorded value on the visit saved in the current call and re-runs the same rules.
 - **Two-step alerts.** `draftAlert` prepares the message and sends nothing. `sendAlert` needs the confirmation token, works once (atomic database claim), expires after 10 minutes and can be retried if delivery fails.
 - **Every number is validated.** Tool inputs are checked with zod, so a speech-recognition slip like BP 999 is rejected instead of saved.
 - **Everything is observable.** Each tool call is stored with its timing and shown in the dashboard timeline.
@@ -114,7 +114,7 @@ Deployment notes learned the hard way: (1) the functions run in **Mumbai (`bom1`
 ### Checks
 
 ```bash
-pnpm test            # 84 tests: rules, tools + database (embedded Postgres), MCP over JSON-RPC, snapshots
+pnpm test            # 99 tests: rules, tools + database (embedded Postgres), MCP over JSON-RPC, snapshots
 pnpm typecheck
 pnpm verify:mcp https://<your-app> $MCP_SHARED_SECRET           # read-only check of a running server
 pnpm verify:mcp https://<your-app> $MCP_SHARED_SECRET --write   # also records a visit and sends one alert (creates data)
@@ -125,7 +125,7 @@ pnpm verify:mcp https://<your-app> $MCP_SHARED_SECRET --write   # also records a
 | Path | What it is |
 |---|---|
 | `lib/rules/anc.v1.ts` | the risk rules (pure, tested) with cited or pending evidence per rule |
-| `lib/tools/` | the 7 tools the agent can call, and the registry both the server and the agent share |
+| `lib/tools/` | the 9 tools the agent can call (find, history, record, `amendLastVisit`, follow-up, today, draft and send alert, guideline search), and the registry both the server and the agent share |
 | `app/api/mcp/route.ts` | the MCP tool server Agora's model calls (Bearer secret, scoped to one ASHA and one call) |
 | `app/api/invite-agent/route.ts` | starts the voice agent (managed speech + model, Murf voice, our tools) |
 | `lib/db/`, `db/schema.sql` | database client (Neon or local Postgres), repository, schema |
