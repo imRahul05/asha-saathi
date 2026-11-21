@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestDb } from '@/lib/db/test-db';
 import type { Db } from '@/lib/db/client';
-import { insertBeneficiary, listEvents } from '@/lib/db/repo';
+import { insertBeneficiary, insertFollowUp, listEvents, upcomingFollowUps } from '@/lib/db/repo';
 import type { Notifier } from '@/lib/notify';
 import { executeTool, TOOLS, TOOL_NAMES, type ToolContext } from '@/lib/tools';
 import { getSnapshot } from '@/lib/snapshot';
-import { amendLastVisit, draftAlert, findBeneficiary, getBeneficiaryHistory, holdAlert, recordVisit, scheduleFollowUp, sendAlert, todaySummary, weeksFromLmp } from './tools';
+import { todayInIndia } from '@/lib/dates';
+import { amendLastVisit, draftAlert, findBeneficiary, getBeneficiaryHistory, holdAlert, recordVisit, scheduleFollowUp, sendAlert, todaySummary, upcomingVisits, weeksFromLmp } from './tools';
 
 let db: Db & { close: () => Promise<void> };
 let ashaId: string;
@@ -46,7 +47,7 @@ afterAll(async () => db.close());
 describe('tool registry', () => {
   it('has unique, camelCase names that match what the agent will be told', () => {
     expect(new Set(TOOL_NAMES).size).toBe(TOOLS.length);
-    expect(TOOL_NAMES).toEqual(['findBeneficiary', 'getBeneficiaryHistory', 'recordVisit', 'amendLastVisit', 'holdAlert', 'scheduleFollowUp', 'todaySummary', 'draftAlert', 'sendAlert', 'searchGuidelines']);
+    expect(TOOL_NAMES).toEqual(['findBeneficiary', 'getBeneficiaryHistory', 'recordVisit', 'amendLastVisit', 'holdAlert', 'scheduleFollowUp', 'todaySummary', 'upcomingVisits', 'draftAlert', 'sendAlert', 'searchGuidelines']);
   });
 });
 
@@ -430,5 +431,76 @@ describe('holdAlert (stop the automatic alert)', () => {
     const none = await executeTool(holdAlert, {}, ctx({ sessionId: 'hold-empty-call' }));
     expect(none.ok).toBe(false);
     if (!none.ok) expect(none.code).toBe('NO_VISIT_IN_CALL');
+  });
+});
+
+describe('upcomingFollowUps and upcomingVisits', () => {
+  let a = '';
+  let c: ToolContext;
+  const ids: Record<string, string> = {};
+  beforeAll(async () => {
+    a = (await db.query<{ id: string }>(`insert into ashas (name, phc_name) values ('Schedule Asha','PHC S') returning id`))[0].id;
+    c = ctx({ ashaId: a, sessionId: 'sched-call' });
+    for (const [n, v] of [['Overdue Om', 'V1'], ['Today Tara', 'V2'], ['Tomorrow Tina', 'V3'], ['Five Fatima', 'V4'], ['Far Farida', 'V5'], ['Done Dipti', 'V6']]) {
+      ids[n] = (await insertBeneficiary(db, { ashaId: a, name: n, village: v })).id;
+    }
+    const sched = (n: string, d: number, reason?: string) => insertFollowUp(db, { ashaId: a, beneficiaryId: ids[n], inDays: d, reason });
+    await sched('Overdue Om', -2, 'recheck BP');
+    await sched('Today Tara', 0);
+    await sched('Tomorrow Tina', 1, 'Hb test');
+    await sched('Five Fatima', 5);
+    await sched('Far Farida', 40);
+    const done = await sched('Done Dipti', 1);
+    await db.query(`update followups set status = 'done' where id = $1`, [done.id]);
+    // another ASHA's follow-up must never show up
+    const oid = await insertBeneficiary(db, { ashaId: otherAshaId, name: 'Their Mother', village: 'X' });
+    await insertFollowUp(db, { ashaId: otherAshaId, beneficiaryId: oid.id, inDays: 1 });
+  });
+
+  it('repo: overdue and in-range pending only, this ASHA only, ordered by date', async () => {
+    const rows = await upcomingFollowUps(db, a, { today: todayInIndia(), days: 7 });
+    expect(rows.map((r) => r.beneficiaryName)).toEqual(['Overdue Om', 'Today Tara', 'Tomorrow Tina', 'Five Fatima']);
+    expect(rows[0]).toMatchObject({ village: 'V1', reason: 'recheck BP' });
+    const wide = (await upcomingFollowUps(db, a, { today: todayInIndia(), days: 60 })).map((r) => r.beneficiaryName);
+    expect(wide).toContain('Far Farida');
+    expect(wide).not.toContain('Done Dipti');
+    expect(wide).not.toContain('Their Mother');
+  });
+
+  it('tool: when labels, count, hint', async () => {
+    const r = await executeTool(upcomingVisits, {}, c);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.data.count).toBe(4);
+    expect(r.data.visits.map((v) => [v.name, v.when])).toEqual([['Overdue Om', 'overdue'], ['Today Tara', 'today'], ['Tomorrow Tina', 'tomorrow'], ['Five Fatima', 'in 5 days']]);
+    expect(r.data.hint).toMatch(/at most the next 5/);
+  });
+
+  it('tool: days narrows the range, other ASHA sees only her own, empty is 0, bad days rejected', async () => {
+    const r = await executeTool(upcomingVisits, { days: 1 }, c);
+    expect(r.ok && r.data.visits.map((v) => v.name)).toEqual(['Overdue Om', 'Today Tara', 'Tomorrow Tina']);
+    const theirs = await executeTool(upcomingVisits, {}, ctx({ ashaId: otherAshaId }));
+    expect(theirs.ok && theirs.data.visits.map((v) => v.name)).toEqual(['Their Mother']);
+    const emptyId = (await db.query<{ id: string }>(`insert into ashas (name, phc_name) values ('Empty','P') returning id`))[0].id;
+    const none = await executeTool(upcomingVisits, {}, ctx({ ashaId: emptyId }));
+    expect(none.ok && none.data.count).toBe(0);
+    const bad = await executeTool(upcomingVisits, { days: 31 }, c);
+    expect(!bad.ok && bad.code).toBe('BAD_INPUT');
+  });
+
+  it('snapshot: schedule statuses, other ASHA excluded, cursor moves on scheduleFollowUp', async () => {
+    const s = await getSnapshot(db, { ashaId: a });
+    expect(s.schedule.map((i) => [i.beneficiary.name, i.status])).toEqual([['Overdue Om', 'overdue'], ['Today Tara', 'today'], ['Tomorrow Tina', 'upcoming'], ['Five Fatima', 'upcoming'], ['Far Farida', 'upcoming']]);
+    const before = s.cursor;
+    await executeTool(scheduleFollowUp, { beneficiaryId: ids['Done Dipti'], inDays: 30 }, c);
+    const after = await getSnapshot(db, { ashaId: a });
+    expect(after.cursor).toBeGreaterThan(before);
+    expect(after.schedule).toHaveLength(6);
+  });
+
+  it('snapshot: a follow-up 90 days out is not listed', async () => {
+    await insertFollowUp(db, { ashaId: a, beneficiaryId: ids['Far Farida'], inDays: 90 });
+    const s = await getSnapshot(db, { ashaId: a });
+    expect(s.schedule).toHaveLength(6);
   });
 });

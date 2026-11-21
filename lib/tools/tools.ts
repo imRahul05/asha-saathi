@@ -3,10 +3,11 @@ import { z } from 'zod';
 import { assessAnc } from '@/lib/rules/anc.v1';
 import { AmendVisitInput, RecordVisitInput, Uuid, type Risk, type Symptom } from '@/lib/schemas';
 import { composeAlertMessage, composeSmsText } from '@/lib/alerts/message';
+import { daysBetween, todayInIndia } from '@/lib/dates';
 import { callUrl } from '@/lib/call/link';
 import {
   alertsForVisit, claimAlertForSending, findBeneficiaries, findRecentDuplicateVisit, getAlertByToken, getAsha, getBeneficiary,
-  expireUnsentAlertsForVisit, getVisit, insertAlertDraft, latestVisit, updateVisitFacts, insertFollowUp, insertVisit, latestOpenAlertForAsha, markAlertFailed, markAlertSent, pendingFollowUps, recentVisits, todayCounts,
+  expireUnsentAlertsForVisit, getVisit, insertAlertDraft, latestVisit, updateVisitFacts, insertFollowUp, insertVisit, latestOpenAlertForAsha, markAlertFailed, markAlertSent, pendingFollowUps, recentVisits, todayCounts, upcomingFollowUps,
   type Beneficiary,
 } from '@/lib/db/repo';
 import { defineTool, ToolError, type ToolContext } from './define';
@@ -241,6 +242,28 @@ export const todaySummary = defineTool({
   async run(_i, ctx) {
     const [counts, due] = await Promise.all([todayCounts(ctx.db, ctx.ashaId), pendingFollowUps(ctx.db, ctx.ashaId, 7)]);
     return { ...counts, due: due.map((d) => ({ name: d.beneficiaryName, village: d.village, dueDate: d.dueDate, reason: d.reason })) };
+  },
+});
+
+export const upcomingVisits = defineTool({
+  name: 'upcomingVisits',
+  description: 'The ASHA\'s planned follow-up visits: overdue ones and those due in the next few days (default 7). Use for "what is planned", "my schedule", "upcoming visits", "kal ka kaam". For "aaj ka kaam" use todaySummary.',
+  input: z.object({ days: z.number().int().min(1).max(30).default(7).describe('How many days ahead to look (1 to 30)') }),
+  async run({ days }, ctx) {
+    const today = todayInIndia(ctx.now());
+    const rows = await upcomingFollowUps(ctx.db, ctx.ashaId, { today, days });
+    const visits = rows.map((f) => {
+      const d = daysBetween(today, f.dueDate);
+      const when = d < 0 ? 'overdue' : d === 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`;
+      return { name: f.beneficiaryName, village: f.village, dueDate: f.dueDate, when, reason: f.reason };
+    });
+    return {
+      count: visits.length,
+      visits,
+      hint: visits.length === 0
+        ? 'Tell her nothing is planned in this period.'
+        : 'Read at most the next 5 out loud, in one or two short sentences (name and when), and say how many more there are. Do not read the whole list.',
+    };
   },
 });
 

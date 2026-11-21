@@ -143,3 +143,9 @@ From `types/conversation.ts` (high-use):
 
 - [conversation_lifecycle.md](L2/conversation_lifecycle.md) — How route contracts are used in sequence.
 - [transcript_pipeline.md](L2/transcript_pipeline.md) — Event-level contract mapping.
+
+## Schedule
+
+- `Snapshot.schedule: SnapshotScheduleItem[]` (session state and dashboard): this ASHA's pending follow-ups that are overdue or due in the next 60 days, earliest first (then by name), at most 50. Each item is `{ id, dueDate (YYYY-MM-DD), beneficiary: { name, village }, reason, status: 'overdue' | 'today' | 'upcoming' }`. `status` is computed against today's date in Asia/Kolkata (`lib/dates.ts`). Data comes from `upcomingFollowUps` in `lib/db/repo.ts` (strictly scoped to the ASHA). Follow-up due dates are also computed in Asia/Kolkata (`insertFollowUp`).
+- Polling: creating a follow-up goes through `executeTool`, which logs an event, so the `?since=` cursor moves and the schedule is rebuilt. A date rollover alone does not move the cursor.
+- Tool `upcomingVisits({ days? })` (11th MCP tool; `days` 1 to 30, default 7). Returns `{ count, visits: [{ name, village, dueDate, when: 'overdue' | 'today' | 'tomorrow' | 'in N days', reason }], hint }`; the hint tells the model to read at most the next 5 aloud and say how many more. `todaySummary` stays for "aaj ka kaam".
