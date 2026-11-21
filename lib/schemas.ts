@@ -41,7 +41,13 @@ export const VisitFacts = z
 export type VisitFacts = z.infer<typeof VisitFacts>;
 
 export const RecordVisitInput = z
-  .object({ beneficiaryId: z.string().uuid().describe('The id returned by findBeneficiary'), ...visitShape })
+  .object({
+    beneficiaryId: z.string().uuid().optional().describe('The id returned by findBeneficiary. Optional: you can pass the mother\'s name instead.'),
+    name: z.string().min(1).max(80).optional().describe('The mother\'s FULL name as the ASHA said it, in English letters (for example "Sunita Devi"). Use this to save a visit in ONE step, without calling findBeneficiary first.'),
+    village: z.string().max(80).optional().describe('Her village, if the ASHA said it'),
+    ...visitShape,
+  })
+  .refine((v) => Boolean(v.beneficiaryId || v.name), { message: 'Give the mother\'s name (or beneficiaryId)' })
   .refine(bpBothOrNeither, { message: 'Give both bpSys and bpDia, or neither' })
   .refine(bpOrdered, { message: 'bpSys must be higher than bpDia' });
 export type RecordVisitInput = z.infer<typeof RecordVisitInput>;

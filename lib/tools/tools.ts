@@ -43,6 +43,10 @@ const mustBeneficiary = async (ctx: ToolContext, id: string): Promise<Beneficiar
   return b;
 };
 
+/** The best match is "the" mother when it is the only one, or clearly ahead of the runner-up ("Sunita Devi" vs "Sunita Kumari"). */
+const pickUnique = <T extends { score: number }>(matches: T[]): T | null =>
+  matches.length === 1 || (matches.length > 1 && matches[0].score - matches[1].score >= 0.2) ? matches[0] : null;
+
 // ---------------------------------------------------------------------------------------------------------------
 
 export const findBeneficiary = defineTool({
@@ -57,8 +61,7 @@ export const findBeneficiary = defineTool({
     }));
     // "Sunita Devi" must not trigger "which Sunita?" just because "Sunita Kumari" also looks similar:
     // when the best match is clearly ahead of the runner-up, treat it as the one.
-    const clearWinner = matches.length > 1 && matches[0].score - matches[1].score >= 0.2;
-    const suggestion = matches.length === 0 ? 'not_found' : matches.length === 1 || clearWinner ? 'unique' : 'ask_which';
+    const suggestion = matches.length === 0 ? 'not_found' : pickUnique(matches) ? 'unique' : 'ask_which';
     return {
       count: matches.length,
       matches,
@@ -91,12 +94,24 @@ export const getBeneficiaryHistory = defineTool({
 export const recordVisit = defineTool({
   name: 'recordVisit',
   description:
-    'Save a home visit and get the risk level. Call it as soon as you have the mother (from findBeneficiary) and at least one measurement or symptom. Never invent numbers: pass only what the ASHA said. The risk level comes from fixed clinical rules; report it exactly as returned.',
+    'Save a home visit and get the risk level, in ONE step: pass the mother\'s FULL name as the ASHA said it (and her village if given) together with the measurements and symptoms, no need to call findBeneficiary first. If several mothers match, it says so and you ask which one (name the villages), then call it again with the village. Never invent numbers: pass only what the ASHA said. The risk level comes from fixed clinical rules; report it exactly as returned.',
   input: RecordVisitInput,
   async run(input, ctx) {
-    const b = await mustBeneficiary(ctx, input.beneficiaryId);
     if (input.bpSys === undefined && input.hb === undefined && input.symptoms.length === 0) {
       throw new ToolError('NOTHING_TO_RECORD', 'कोई जाँच या लक्षण नहीं बताया गया।', 'Ask for BP, haemoglobin or symptoms before saving.');
+    }
+    let b: Beneficiary;
+    if (input.beneficiaryId) {
+      b = await mustBeneficiary(ctx, input.beneficiaryId);
+    } else {
+      const found = await findBeneficiaries(ctx.db, ctx.ashaId, (input.name ?? '').trim(), input.village?.trim());
+      const winner = pickUnique(found);
+      if (!winner) {
+        throw found.length === 0
+          ? new ToolError('NOT_FOUND', 'यह नाम मेरी सूची में नहीं मिला।', 'No mother with this name. Ask the ASHA to repeat the name or say the village. Nothing was saved.')
+          : new ToolError('AMBIGUOUS', 'कई नाम मिलते हैं, कौन सा?', `Several mothers match: ${found.slice(0, 4).map((x) => `${x.name} (${x.village ?? 'no village'})`).join('; ')}. Ask which one, naming the villages, then call recordVisit again with the village. Nothing was saved.`);
+      }
+      b = winner;
     }
     const weeks = input.gestationWeeks ?? weeksFromLmp(b.lmp, ctx.now()) ?? undefined;
     const facts = { ...input, gestationWeeks: weeks };

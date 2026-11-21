@@ -14,6 +14,8 @@ import AgoraRTC, {
 import {
   AgoraVoiceAI,
   AgoraVoiceAIEvents,
+  ChatMessagePriority,
+  ChatMessageType,
   AgentState,
   MessageSalStatus,
   TranscriptHelperMode,
@@ -446,6 +448,27 @@ export default function ConversationComponent({
    * If we also unpublish in the toggle, usePublish and the button fight each other
    * and break the MicButtonWithVisualizer Web Audio graph.
    */
+  // Typed message: for a noisy place where speech is not picked up well. It goes to the agent exactly like something she said.
+  const handleSendText = useCallback(
+    async (text: string) => {
+      const ai = AgoraVoiceAI.getInstance();
+      if (!ai) throw new Error('not ready');
+      await ai.chat(agentUID, { messageType: ChatMessageType.TEXT, priority: ChatMessagePriority.INTERRUPTED, responseInterruptable: true, text });
+    },
+    [agentUID],
+  );
+
+  // The browser can refuse to play sound until the person taps. Say so, with a button that turns it on.
+  const [soundBlocked, setSoundBlocked] = useState(false);
+  useEffect(() => {
+    AgoraRTC.onAudioAutoplayFailed = () => setSoundBlocked(true);
+    return () => { AgoraRTC.onAudioAutoplayFailed = undefined; };
+  }, []);
+  const enableSound = useCallback(() => {
+    remoteUsers.forEach((u) => { try { u.audioTrack?.play(); } catch { /* ignore */ } });
+    setSoundBlocked(false);
+  }, [remoteUsers]);
+
   const handleMicToggle = useCallback(async () => {
     const next = !isEnabled;
     const track = localMicrophoneTrack;
@@ -528,6 +551,10 @@ export default function ConversationComponent({
         onRetry: handleEndConversation,
       };
     }
+    if (soundBlocked) {
+      const t = stringsFor(callLanguage === 'auto' || !callLanguage ? uiLang : callLanguage, uiLang);
+      return { text: `${t.soundBlocked} ${t.enableSound}`, onRetry: enableSound };
+    }
     if (captionsStalled) {
       return {
         text: stringsFor(callLanguage === 'auto' || !callLanguage ? uiLang : callLanguage, uiLang).captionsStalled,
@@ -538,7 +565,7 @@ export default function ConversationComponent({
       };
     }
     return null;
-  }, [connectionIssues, connectionSeverity, agentSlow, isAgentConnected, handleEndConversation, notJoinedText, captionsStalled, callLanguage, uiLang]);
+  }, [connectionIssues, connectionSeverity, agentSlow, isAgentConnected, handleEndConversation, notJoinedText, captionsStalled, callLanguage, uiLang, soundBlocked, enableSound]);
 
   return (
     <>
@@ -548,6 +575,7 @@ export default function ConversationComponent({
         currentInProgressMessage={currentInProgressMessage}
         agentUID={agentUID}
         onToggleMic={handleMicToggle}
+        onSendText={handleSendText}
         onEnd={handleEndConversation}
         micSelector={<MicrophoneSelector localMicrophoneTrack={localMicrophoneTrack} />}
         problem={problem}

@@ -79,6 +79,32 @@ describe('findBeneficiary', () => {
 });
 
 describe('recordVisit + rules', () => {
+  it('saves a visit in one step from the mother\'s name, no findBeneficiary first', async () => {
+    const r = await executeTool(recordVisit, { name: 'Sunita Devi', bpSys: 150, bpDia: 100, symptoms: ['swelling_feet'] }, ctx());
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.data.beneficiary.id).toBe(sunitaId);
+    expect(r.data.risk.level).toBe('high');
+  });
+
+  it('asks which mother when the name is ambiguous, and saves nothing', async () => {
+    const r = await executeTool(recordVisit, { name: 'Sunita', bpSys: 150, bpDia: 100, symptoms: [] }, ctx());
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.code).toBe('AMBIGUOUS');
+    expect(r.hint).toMatch(/Narsapura/);
+    expect(r.hint).toMatch(/Malur/);
+  });
+
+  it('refuses an unknown name without saving, and needs a name or an id', async () => {
+    const none = await executeTool(recordVisit, { name: 'Zzzzzzz Qqqqqq', bpSys: 120, bpDia: 80, symptoms: [] }, ctx());
+    expect(none.ok).toBe(false);
+    if (!none.ok) expect(none.code).toBe('NOT_FOUND');
+    const bad = await executeTool(recordVisit, { bpSys: 120, bpDia: 80, symptoms: [] } as never, ctx());
+    expect(bad.ok).toBe(false);
+    if (!bad.ok) expect(bad.code).toBe('BAD_INPUT');
+  });
+
   it('saves the demo visit as HIGH with a cited BP reason', async () => {
     const r = await executeTool(recordVisit, { beneficiaryId: sunitaId, bpSys: 150, bpDia: 100, symptoms: ['swelling_feet'] }, ctx());
     expect(r.ok).toBe(true);

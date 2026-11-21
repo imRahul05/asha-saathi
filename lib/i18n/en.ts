@@ -164,6 +164,11 @@ export const en = {
   stepVoice: 'Choose a voice. Tap one to hear it',
   stepStart: 'Press the button and start talking',
   startButton: 'Start talking',
+  typePlaceholder: 'Or type here if it is noisy',
+  sendText: 'Send',
+  micDenied: 'Allow the microphone to talk to Saathi: tap the lock icon in the address bar and allow the microphone, then try again.',
+  soundBlocked: 'Sound is blocked by your browser.',
+  enableSound: 'Tap to turn sound on',
   goodToKnow: 'What Saathi cannot do',
   cant: ['It does not diagnose.', 'It does not suggest medicines or doses.', 'It cannot add new mothers yet.', 'It is not connected to government systems: the data here is a demo.', 'It covers pregnancy visits only for now.'],
 };

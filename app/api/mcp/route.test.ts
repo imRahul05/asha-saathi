@@ -55,8 +55,8 @@ describe('/api/mcp', () => {
     expect(tools.map((t) => t.name).sort()).toEqual(['amendLastVisit', 'draftAlert', 'findBeneficiary', 'getBeneficiaryHistory', 'recordVisit', 'scheduleFollowUp', 'searchGuidelines', 'sendAlert', 'todaySummary']);
     const rv = tools.find((t) => t.name === 'recordVisit')!;
     expect(rv.inputSchema.type).toBe('object');
-    expect(Object.keys(rv.inputSchema.properties ?? {})).toEqual(expect.arrayContaining(['beneficiaryId', 'bpSys', 'bpDia', 'hb', 'symptoms']));
-    expect(rv.inputSchema.required).toEqual(['beneficiaryId']);
+    expect(Object.keys(rv.inputSchema.properties ?? {})).toEqual(expect.arrayContaining(['beneficiaryId', 'name', 'village', 'bpSys', 'bpDia', 'hb', 'symptoms']));
+    expect(rv.inputSchema.required ?? []).not.toContain('bpSys'); // the mother is named either by id or by name
   });
 
   it('runs the whole visit flow over MCP: find, record, draft, send once', async () => {
