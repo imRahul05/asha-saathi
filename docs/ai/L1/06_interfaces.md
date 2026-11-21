@@ -117,7 +117,7 @@ From `types/conversation.ts` (high-use):
 - `POST /api/call/event` body `{ t, type: 'joined'|'left' }` (no session; the signed link is the credential): logs one `events` row (`type` 'call', `name` 'doctorCall', `input` `{ role, event, visitId }`) under the visit's `session_id`, so the call shows in the visit timeline. `401 LINK_INVALID` for bad links; the same role+event for the same visit within 10 seconds is ignored (`{ ok, duplicate: true }`). `CallRoom` sends it with `sendBeacon` (fetch keepalive fallback) after join and on leave/`pagehide`, never blocking the call. No schema change.
 - `SnapshotVisit.call`: `{ doctorJoinedAt, lastEventAt }` derived from `doctorCall` events of the visit's session; `AlertBar` shows `doctorJoined(doctor)` once `doctorJoinedAt` is set.
 - `/call/[t]` page: audio-only RTC in Communication mode (`mode: 'rtc'`), mute, leave.
-- `POST /api/invite-agent` also takes `language` (one of `lib/languages.ts` codes).
+- `POST /api/invite-agent` also takes `language` (one of `lib/languages.ts` codes) and optional `voice` (a Murf voice id from `lib/voices.ts` for that language; anything else falls back to the language default).
 - `GET /api/session/state?since=<cursor>` and `/api/dashboard?since=` return `{ unchanged: true, cursor }` when nothing changed.
 
 ## Backward Compatibility Guidance

@@ -14,6 +14,7 @@ import { LoadingSkeleton } from './LoadingSkeleton';
 import { StartScreen } from './asha/StartScreen';
 import { DEFAULT_LANGUAGE, type LangCode } from '@/lib/languages';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
+import { defaultVoice, resolveVoice } from '@/lib/voices';
 
 // Dynamically import the ConversationComponent with ssr disabled
 const ConversationComponent = dynamic(() => import('./ConversationComponent'), {
@@ -73,6 +74,17 @@ export default function LandingPage() {
   // The language choice is shared with the whole site (and remembered in this browser). The call uses it and keeps it fixed until the call ends.
   const { language, setLanguage: chooseLanguage, s } = useLanguage();
   const [callLanguage, setCallLanguage] = useState<LangCode>(DEFAULT_LANGUAGE);
+  // Voice: remembered per language in this browser.
+  const [voice, setVoiceState] = useState<string>(defaultVoice(language).id);
+  useEffect(() => {
+    let saved: string | null = null;
+    try { saved = window.localStorage.getItem(`asha_voice_${language}`); } catch { /* storage blocked: use the default */ }
+    setVoiceState(resolveVoice(language, saved).id);
+  }, [language]);
+  const chooseVoice = (id: string) => {
+    setVoiceState(id);
+    try { window.localStorage.setItem(`asha_voice_${language}`, id); } catch { /* ignore */ }
+  };
 
   const handleStartConversation = async () => {
     setIsLoading(true);
@@ -110,6 +122,7 @@ export default function LandingPage() {
             requester_id: responseData.uid,
             channel_name: responseData.channel,
             language,
+            voice,
           } as ClientStartRequest),
         })
           .then(async (res) => {
@@ -232,7 +245,7 @@ export default function LandingPage() {
   return (
     <div className="relative h-dvh overflow-hidden bg-asha-cream text-asha-ink">
       {!showConversation ? (
-        <StartScreen isLoading={isLoading} error={error} onStart={handleStartConversation} language={language} onLanguageChange={chooseLanguage} />
+        <StartScreen isLoading={isLoading} error={error} onStart={handleStartConversation} language={language} onLanguageChange={chooseLanguage} voice={voice} onVoiceChange={chooseVoice} />
       ) : agoraData && rtmClient ? (
         <>
           {/* Non-fatal: the call screen still renders, but say exactly why the agent is missing. */}
