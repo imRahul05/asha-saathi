@@ -39,6 +39,7 @@ import {
 import { VoiceScreen } from './asha/VoiceScreen';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
 import { stringsFor } from '@/lib/i18n';
+import { activeBlockingIssue, classifyIssue } from '@/lib/call-errors';
 import { useSnapshot } from '@/hooks/use-snapshot';
 import type { OrbState } from '@/lib/asha/lang';
 import { type QuickstartAgentMetric } from './QuickstartPipelineMetrics';
@@ -94,6 +95,8 @@ export default function ConversationComponent({
   rtmClient,
   onTokenWillExpire,
   onEndConversation,
+  onRestart,
+  canAutoRetry,
   callLanguage,
 }: ConversationComponentProps) {
   const client = useRTCClient();
@@ -536,14 +539,45 @@ export default function ConversationComponent({
     }
   }, [visualizerState, isEnabled]);
 
+  const handleRestart = onRestart;
   const { uiLang } = useLanguage();
   const notJoinedText = stringsFor(callLanguage === 'auto' || !callLanguage ? uiLang : callLanguage, uiLang).agentNotJoined;
 
+  // The newest blocking problem that the call has not recovered from (a later spoken line means it worked again).
+  const lastActivityAt = useMemo(() => {
+    const last = transcript[transcript.length - 1] as { _time?: number } | undefined;
+    return typeof last?._time === 'number' ? normalizeTimestampMs(last._time) : null;
+  }, [transcript]);
+  const blockingIssue = useMemo(() => activeBlockingIssue(connectionIssues, lastActivityAt), [connectionIssues, lastActivityAt]);
+
+  // If she cannot be heard (speech recognition timed out) a fresh start usually fixes it: do that once by itself, then ask her to tap.
+  const [autoRetrying, setAutoRetrying] = useState(false);
+  useEffect(() => {
+    if (!blockingIssue || !handleRestart) return;
+    if (!classifyIssue(blockingIssue).autoRetry || !canAutoRetry?.()) return;
+    setAutoRetrying(true);
+    const id = setTimeout(() => { void handleRestart(true); }, 1800);
+    return () => clearTimeout(id);
+  }, [blockingIssue, handleRestart, canAutoRetry]);
+
   // Real error text when we have it: latest agent/RTM issue, else a plain "not joined" message.
   const problem = useMemo(() => {
+    const t = stringsFor(callLanguage === 'auto' || !callLanguage ? uiLang : callLanguage, uiLang);
+    // A problem with the speech service, the model or the voice: say it in plain words (and keep the raw text small, for support).
+    // It used to be shown only for "error" severity, and a speech-recognition timeout counts as a harmless warning, so she was never told Saathi could not hear her.
+    if (blockingIssue) {
+      const c = classifyIssue(blockingIssue);
+      const detail = `${blockingIssue.source}: ${blockingIssue.message}${blockingIssue.code ? ` (code ${blockingIssue.code})` : ''}`;
+      if (c.kind === 'asr') {
+        return autoRetrying
+          ? { text: t.errAsrRetrying, retrying: true, detail }
+          : { text: t.errAsrFinal, onRetry: handleRestart ?? handleEndConversation, detail };
+      }
+      return { text: c.kind === 'llm' ? t.errLlm : c.kind === 'tts' ? t.errTts : t.errGeneric, onRetry: handleRestart ?? handleEndConversation, detail };
+    }
     const latest = connectionIssues[0]; // issues are prepended, newest first
     if (connectionSeverity === 'error' && latest) {
-      return { text: `${latest.source.toUpperCase()}: ${latest.message}`, onRetry: handleEndConversation };
+      return { text: t.errGeneric, onRetry: handleRestart ?? handleEndConversation, detail: `${latest.source}: ${latest.message}` };
     }
     if (agentSlow && !isAgentConnected) {
       return {
@@ -565,7 +599,7 @@ export default function ConversationComponent({
       };
     }
     return null;
-  }, [connectionIssues, connectionSeverity, agentSlow, isAgentConnected, handleEndConversation, notJoinedText, captionsStalled, callLanguage, uiLang, soundBlocked, enableSound]);
+  }, [connectionIssues, connectionSeverity, agentSlow, isAgentConnected, handleEndConversation, handleRestart, blockingIssue, autoRetrying, notJoinedText, captionsStalled, callLanguage, uiLang, soundBlocked, enableSound]);
 
   return (
     <>

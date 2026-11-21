@@ -38,7 +38,7 @@ type VoiceScreenProps = {
   onEnd: () => void;
   micSelector?: ReactNode;
   /** A plain-words problem to show (e.g. agent never joined, RTC error), with an optional retry. */
-  problem?: { text: string; onRetry?: () => void } | null;
+  problem?: { text: string; onRetry?: () => void; /** raw technical text for support, shown small */ detail?: string; /** a retry is already under way: calm tone, no button */ retrying?: boolean } | null;
   /** Live data for this call from /api/session/state. Null until the first response. */
   snapshot?: Snapshot | null;
   snapshotError?: string | null;
@@ -180,14 +180,22 @@ export function VoiceScreen({
             </div>
           )}
           {problem && (
-            <div role="alert" className="flex items-start gap-3 rounded-2xl border border-asha-red/20 bg-asha-red-soft p-3 text-sm text-asha-red">
+            <div role="alert" className={cn('rounded-2xl border p-3 text-sm', problem.retrying ? 'border-[#B7791F]/40 bg-asha-amber text-[#7A4E0A]' : 'border-asha-red/20 bg-asha-red-soft text-asha-red')}>
+             <div className="flex items-start gap-3">
               <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
-              <p className="min-w-0 flex-1 break-words font-medium">{problem.text}</p>
-              {problem.onRetry && (
+              <p className="min-w-0 flex-1 break-words text-base font-semibold">{problem.text}</p>
+              {problem.onRetry && !problem.retrying && (
                 <Button variant="outline" size="sm" className="shrink-0 border-asha-red/30 bg-white text-asha-red" onClick={problem.onRetry}>
                   <RefreshCw className="h-4 w-4" aria-hidden /> {s.retry}
                 </Button>
               )}
+             </div>
+             {problem.detail && (
+               <details className="mt-2 text-xs opacity-80">
+                 <summary className="cursor-pointer font-semibold">{s.errDetails}</summary>
+                 <p className="mt-1 break-all font-mono">{problem.detail}</p>
+               </details>
+             )}
             </div>
           )}
         </div>

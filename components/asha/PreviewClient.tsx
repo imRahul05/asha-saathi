@@ -5,6 +5,7 @@ import { VoiceScreen, type TranscriptMessage } from '@/components/asha/VoiceScre
 import { DEV_SNAPSHOT } from '@/lib/asha/fixtures';
 import type { OrbState } from '@/lib/asha/lang';
 import { LANGUAGES } from '@/lib/languages';
+import { stringsFor } from '@/lib/i18n';
 
 // DEV ONLY design preview with sample data. Not reachable in production (see app/preview/page.tsx).
 const STATES: OrbState[] = ['joining', 'not-joined', 'listening', 'thinking', 'speaking', 'muted', 'disconnected'];
@@ -76,7 +77,7 @@ export function PreviewClient() {
           agentUID="1"
           onToggleMic={() => setState((s) => (s === 'muted' ? 'listening' : 'muted'))}
           onEnd={() => undefined}
-          problem={problem ? { text: 'TTS: 401 invalid api key', onRetry: () => setProblem(false) } : null}
+          problem={problem ? { text: stringsFor(set === 'empty' ? 'hi' : set).errAsrFinal, onRetry: () => setProblem(false), detail: 'agent: asr: Connection timeout after 10 seconds (code 1000)' } : null}
           snapshot={snapshot}
         />
       ) : (

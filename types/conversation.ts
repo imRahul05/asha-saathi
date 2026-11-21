@@ -36,6 +36,10 @@ export interface ConversationComponentProps {
   rtmClient: RTMClient;
   onTokenWillExpire: (uid: string) => Promise<AgoraRenewalTokens>;
   onEndConversation: () => void;
+  /** End this call and start a new one with the same language and voice. `auto` is true for the automatic retry. */
+  onRestart?: (auto?: boolean) => Promise<void> | void;
+  /** Whether one more automatic retry is still allowed for this call */
+  canAutoRetry?: () => boolean;
   /** The language this call was started in */
   callLanguage?: string;
 }
