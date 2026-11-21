@@ -78,6 +78,15 @@ pnpm kb:check                       # retrieval regression: right passage found,
 
 See [knowledge/README.md](knowledge/README.md) for the quote rules and the update steps (also available as the `kb-update` skill).
 
+## Local testing
+
+Sign-in, the screens and the tests work on `localhost`. The **voice agent does not**: Agora's cloud calls your tool server over the internet and rejects `localhost` ("URL host localhost is blocked"). To test a call from your machine set `PUBLIC_BASE_URL` in `.env.local` to either:
+
+- your deployed site, e.g. `https://asha-saathi-mocha.vercel.app`. Tool calls then run on that deployment, so your local `MCP_SHARED_SECRET` and `DATABASE_URL` must match its values; or
+- a tunnel to your local server (`cloudflared tunnel --url http://localhost:3000` or `ngrok http 3000`), which also tests your local tool code.
+
+Restart `pnpm dev` after changing it. The app shows this advice instead of the raw Agora error.
+
 ## Voices
 
 The start screen has a swipeable voice picker (cards you can swipe, tap, or step with the arrows). Each language lists its Murf Falcon voices in `lib/voices.ts`. "Pooja" (multilingual) is the default for Hindi, English, Kannada, Tamil and Telugu, where Murf lists it; Gujarati, Bengali, Marathi and Malayalam default to native voices because Pooja is not listed for them. The choice is remembered per language in the browser and sent as `voice` to `/api/invite-agent`, which only accepts a voice offered for that language (otherwise the default). `MURF_VOICE_ID` is no longer used. `MURF_WS_URL` still overrides the Murf endpoint (default `wss://global.api.murf.ai/...`, which routes to the nearest region).

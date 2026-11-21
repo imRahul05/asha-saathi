@@ -76,7 +76,9 @@ for (const name of generated) console.log(`  created  ${name}  (saved to .env.lo
 for (const [typo, right] of Object.entries(TYPOS)) if (has(typo) && !has(right)) console.log(`  note     ${typo} is not read by the app, use ${right}`);
 
 console.log('\nOptional: NOTIFIER, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER.');
-console.log('\nImportant: Agora cannot reach localhost. To test the voice agent from your machine, set PUBLIC_BASE_URL to a public URL');
-console.log('(a tunnel such as `cloudflared tunnel --url http://localhost:3000`, or your deployed URL). Sign-in and the screens work without it.');
+console.log('\nImportant: Agora cannot reach localhost (the call fails with "URL host localhost is blocked"). To test the voice agent from your machine, set PUBLIC_BASE_URL');
+console.log('to a public URL: your deployed site (then MCP_SHARED_SECRET and DATABASE_URL here must match that deployment), or a tunnel such as `cloudflared tunnel --url http://localhost:3000`.');
+if (!has('PUBLIC_BASE_URL')) console.log('  -> PUBLIC_BASE_URL is NOT set in your env files yet.');
+console.log('Sign-in and the screens work without it.');
 console.log(problems ? `\n${problems} required value(s) missing. Add them to .env.local and run this again.` : '\nReady. Run: pnpm dev');
 process.exit(problems ? 1 : 0);

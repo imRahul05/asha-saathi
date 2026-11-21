@@ -70,7 +70,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'RATE_LIMITED', message: allowed.message }, { status: 429, headers: { 'Retry-After': String(allowed.retryAfterSeconds) } });
     }
 
-    const baseUrl = process.env.PUBLIC_BASE_URL ?? `https://${request.headers.get('host')}`;
+    const baseUrl = process.env.PUBLIC_BASE_URL || `https://${request.headers.get('host')}`;
+    // Agora's cloud calls our tool server over the internet, so it rejects localhost and private addresses. Say so plainly instead of passing on Agora's raw error.
+    if (/^https?:\/\/(localhost|127\.|0\.0\.0\.0|\[::1\]|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(baseUrl)) {
+      return NextResponse.json(
+        {
+          error: 'LOCAL_URL_NOT_REACHABLE',
+          message:
+            'The voice agent cannot reach a localhost address. Set PUBLIC_BASE_URL in .env.local to a public URL (your deployed site, or a tunnel such as `cloudflared tunnel --url http://localhost:3000`) and restart. See README: Local testing.',
+        },
+        { status: 400 },
+      );
+    }
     const llmModel: (typeof MANAGED_LLMS)[number] =
       MANAGED_LLMS.find((m) => m === process.env.LLM_MODEL) ?? 'gpt-4o-mini';
     const murfKey = process.env.MURF_API_KEY;
