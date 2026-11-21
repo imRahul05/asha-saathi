@@ -6,6 +6,7 @@ import { DEFAULT_AGENT_UID } from '@/lib/agora';
 import { buildSystemPrompt } from '@/lib/prompt';
 import { DEFAULT_LANGUAGE, LANGUAGES, LANGUAGE_ORDER } from '@/lib/languages';
 import { TOOL_NAMES } from '@/lib/tools';
+import { resolveVoice } from '@/lib/voices';
 import { getDb, hasDatabase } from '@/lib/db/client';
 import { getAsha } from '@/lib/db/repo';
 import { requireSession } from '@/lib/auth/require';
@@ -35,6 +36,7 @@ const Body = z.object({
   requester_id: z.string().min(1).max(40),
   channel_name: z.string().min(1).max(120),
   language: z.enum(LANGUAGE_ORDER as [string, ...string[]]).default(DEFAULT_LANGUAGE),
+  voice: z.string().max(60).optional(),
 });
 
 function requireEnv(name: string): string {
@@ -83,9 +85,10 @@ export async function POST(request: NextRequest) {
     const llmModel: (typeof MANAGED_LLMS)[number] =
       MANAGED_LLMS.find((m) => m === process.env.LLM_MODEL) ?? 'gpt-4o-mini';
     const murfKey = process.env.MURF_API_KEY;
-    const murfVoice = process.env.MURF_VOICE_ID;
-    const useMurf = Boolean(murfKey && murfVoice);
-    if (!useMurf) console.warn('[invite-agent] MURF_API_KEY / MURF_VOICE_ID not set: falling back to the managed MiniMax voice');
+    // The voice must be one offered for this language (lib/voices.ts); anything else falls back to the language's default.
+    const murfVoice = resolveVoice(lang.code, parsed.data.voice).id;
+    const useMurf = Boolean(murfKey);
+    if (!useMurf) console.warn('[invite-agent] MURF_API_KEY not set: falling back to the managed MiniMax voice');
 
     const client = new AgoraClient({
       area: Area.AP, // routes API calls through Asia-Pacific

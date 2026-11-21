@@ -12,6 +12,8 @@ export interface ClientStartRequest {
   channel_name: string;
   /** Call language code, see lib/languages.ts */
   language?: string;
+  /** Murf voice id chosen on the start screen (checked on the server against lib/voices.ts) */
+  voice?: string;
 }
 
 export interface StopConversationRequest {
