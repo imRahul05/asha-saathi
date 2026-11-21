@@ -1,6 +1,6 @@
 import type { Db } from '@/lib/db/client';
 import { alertsForVisit, eventsCursor, firstAsha, getAsha, latestVisit, listEvents, mostRecentlyActiveAshaId, todayCounts, upcomingFollowUps, type EventRow, type Visit } from '@/lib/db/repo';
-import { daysBetween, todayInIndia } from '@/lib/dates';
+import { daysBetween, todayInIndia, dateColumnToIso } from '@/lib/dates';
 import type { Snapshot, SnapshotEvent, SnapshotRemaining, SnapshotScheduleItem, SnapshotVisit } from '@/lib/snapshot-types';
 
 type Row = Record<string, unknown>;
@@ -75,7 +75,7 @@ async function toSnapshotVisit(db: Db, v: Visit, ashaName: { doctor: string | nu
       ? { status: alert.status, channel: alert.provider, doctor: alert.toName ?? ashaName?.doctor ?? null, phc: ashaName?.phc ?? null, message: alert.message, sentAt: alert.sentAt, error: alert.error }
       : null,
     followUp: fu[0]
-      ? { dueDate: fu[0].due_date instanceof Date ? fu[0].due_date.toISOString().slice(0, 10) : String(fu[0].due_date).slice(0, 10), reason: (fu[0].reason as string) ?? null }
+      ? { dueDate: dateColumnToIso(fu[0].due_date) ?? '', reason: (fu[0].reason as string) ?? null }
       : null,
   };
 }
