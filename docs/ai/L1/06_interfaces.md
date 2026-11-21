@@ -93,6 +93,13 @@ From `types/conversation.ts` (high-use):
 
 - `401 SESSION_EXPIRED` (token and agent routes): the signed-in account no longer exists. `401 SIGN_IN_REQUIRED`: no valid cookie. Both send the user to `/login?expired=1`.
 
+## Faster visit save and typed messages
+
+- `recordVisit` takes either `beneficiaryId` or the mother's `name` (and optional `village`), so a spoken visit report is saved in ONE tool call (no `findBeneficiary` first). Several matches: error `AMBIGUOUS` with the candidates in the hint; none: `NOT_FOUND`; nothing is saved in either case. Measured live: first sound of the reply 4.7 s after she stops speaking (was 6.8 s).
+- The `/api/mcp` route trusts the `X-Asha-Id` header (set by our own start route behind the shared secret) without a database lookup.
+- The call screen has a typed-message box (`ai.chat` of the Agora client toolkit, text type, interrupting). It appears in the conversation like speech.
+- The start button first asks for the microphone, so the agent is not started (and does not greet) while the browser permission box is open; a refusal shows a clear message. If the browser blocks sound, a banner with a button turns it on.
+
 ## Alerts from the screen
 
 - `POST /api/alerts/send` body `{ visitId }` (session required): the ASHA's own tap on "Send now" / "Try again". It runs `draftAlert` then `sendAlert` (same tools as the voice agent: at most once, logged as events, only her own visits) and answers `{ ok, status, provider }`. The result card's `AlertBar` shows draft / failed / sent plus "Talk to the doctor".

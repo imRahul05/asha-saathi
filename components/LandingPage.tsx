@@ -105,6 +105,19 @@ export default function LandingPage() {
     setAgentJoinError(null);
     setCallLanguage(language);
 
+    // Ask for the microphone first. The permission box can take a few seconds the first time, and the agent must not start (and greet) while it is open,
+    // or the greeting is spoken before the person can hear it. A refusal also gets a clear message here, instead of a silent call.
+    try {
+      if (navigator.mediaDevices?.getUserMedia) {
+        const probe = await navigator.mediaDevices.getUserMedia({ audio: true });
+        probe.getTracks().forEach((t) => t.stop());
+      }
+    } catch {
+      setError(s.micDenied);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       // 1. Fetch RTC token + channel
       // console.log('Fetching Agora token...');

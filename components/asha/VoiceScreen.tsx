@@ -14,6 +14,7 @@ import { HELLO, STRINGS, detectUiLang, type UiLang } from '@/lib/i18n';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
 import { ConnectingGreetings } from './ConnectingGreetings';
 import { AlertBar } from './AlertBar';
+import { TypeBox } from './TypeBox';
 import { HintStrip, RecordGuide } from './RecordGuide';
 
 export type TranscriptMessage = {
@@ -29,6 +30,8 @@ type VoiceScreenProps = {
   currentInProgressMessage: TranscriptMessage | null;
   agentUID: string;
   onToggleMic: () => void;
+  /** Send a typed message to Saathi (for noisy places). Hidden when not provided. */
+  onSendText?: (text: string) => Promise<void> | void;
   onEnd: () => void;
   micSelector?: ReactNode;
   /** A plain-words problem to show (e.g. agent never joined, RTC error), with an optional retry. */
@@ -47,7 +50,7 @@ const initials = (name: string) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
 
 export function VoiceScreen({
-  orbState, messageList, currentInProgressMessage, agentUID, onToggleMic, onEnd, micSelector, problem, snapshot = null, snapshotError = null, callLanguage = 'hi',
+  orbState, messageList, currentInProgressMessage, agentUID, onToggleMic, onSendText, onEnd, micSelector, problem, snapshot = null, snapshotError = null, callLanguage = 'hi',
 }: VoiceScreenProps) {
   const [tab, setTab] = useState<'talk' | 'result'>('talk');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -222,6 +225,7 @@ export function VoiceScreen({
             );
           })
         )}
+        {onSendText && <TypeBox onSend={onSendText} disabled={orbState === 'joining' || orbState === 'not-joined' || orbState === 'disconnected'} s={s} />}
       </div>
 
       {/* Orb + controls: bottom dock on phone, centred main stage on desktop */}

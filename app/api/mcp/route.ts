@@ -4,7 +4,7 @@
 import { createMcpHandler } from 'mcp-handler';
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { getDb } from '@/lib/db/client';
-import { firstAsha, getAsha } from '@/lib/db/repo';
+import { firstAsha } from '@/lib/db/repo';
 import { getNotifier } from '@/lib/notify';
 import { executeTool, TOOLS, type ToolContext } from '@/lib/tools';
 
@@ -25,11 +25,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 async function buildContext(req: Request): Promise<ToolContext | null> {
   const db = getDb();
   const headerAsha = req.headers.get('x-asha-id');
-  const asha = (headerAsha && UUID.test(headerAsha) ? await getAsha(db, headerAsha) : null) ?? (await firstAsha(db));
-  if (!asha) return null;
+  // The header is set by our own start route (behind the shared secret) from the signed session, so it is trusted without another database round trip:
+  // every tool query is scoped to this id, and an id that does not exist simply finds nothing. Only without a header (local checks) fall back to the first ASHA.
+  const ashaId = headerAsha && UUID.test(headerAsha) ? headerAsha : (await firstAsha(db))?.id;
+  if (!ashaId) return null;
   return {
     db,
-    ashaId: asha.id,
+    ashaId,
     sessionId: (req.headers.get('x-session') ?? '').slice(0, 120) || null,
     turnId: randomUUID(),
     notifier: getNotifier(),
