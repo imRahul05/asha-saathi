@@ -18,9 +18,10 @@
 | 1 Core skeleton | Done: zod schemas, DB schema + repository (Neon, local Postgres, embedded test Postgres), MCP route, system prompt, agent start route, `pnpm verify:mcp`. |
 | 2 Tools + rules | Done: 7 tools, `anc.v1` rules with cited or pending evidence, 69 tests, verified end-to-end on a real local Postgres. |
 | 3 RAG | **Done** (keyword search over verified quotes; no embeddings). `searchGuidelines` tool, `kb_chunks` table, `kb:verify` / `kb:ingest` / `kb:check`. Live-tested in English and Hindi through Agora. |
-| 4 Execute + follow-up | Two-phase alert, idempotent send and follow-ups are done with the console notifier. `NOTIFIER=twilio` is implemented but untested (needs Twilio credentials). |
+| 4 Execute + follow-up | Done: two-phase alert, idempotent send, follow-ups. Delivery chain Telegram, then WhatsApp, then SMS (`NOTIFIER=multi`); Telegram verified on a real phone. The result card has an alert bar with Send now / Try again / Talk to the doctor. |
 | 5 Dashboard UI | Done and live: voice screen, result panel, alert and follow-up, projector dashboard, all reading the database. Call transcript on the dashboard is not built. |
-| 6-7 Harden, rehearse | Not started. |
+| 6-7 Harden, rehearse | Partly: safety rules, usage guard, session handling, caption watchdog done. Still open: reset/warm-up scripts, `amendLastVisit`, full phone rehearsal, backup video, pitch script. |
+| Extra: recording guide | Done: "What I can record" hints and example, a checklist of what was picked up (BP, Hb, weeks, symptoms; missing items highlighted), time from first words to saved visit, and a collapsed list of what Saathi cannot do, in all nine languages. |
 | Extra: languages | Done (PR 4): per-call picker, 9 languages + Auto (beta). Live-tested English, Tamil, Gujarati, Malayalam; Hindi and Kannada earlier. |
 | Extra: doctor voice call | Done: signed link in the alert, browser audio call over Agora RTC (`/call/[t]`), ASHA "call doctor" button. Tested with two browsers on prod. |
 
@@ -37,6 +38,8 @@
 | Language review | Greetings and word lists are machine-written and need a native speaker. Telugu, Bengali and Marathi untested. Marathi and Malayalam use stand-in Agora turn-detection tags. |
 | Notifications | WhatsApp sandbox needs `join` and a 24-hour window; production needs an approved WhatsApp sender. |
 | Pitch and rehearsal (phases 6-7) | Demo is Saturday 21 Nov. |
+| Phone calls (inbound for feature-phone ASHAs, outbound reminders and doctor voice alerts) | Needs a carrier number and SIP trunk imported through Agora's (Preview) Create number API; costs money; roadmap only. |
+| Live captions | Rarely (about 1 in 20 test calls and once for a real user) captions do not arrive while the call works. Not reproduced on demand; a watchdog retries once then shows a Retry banner. |
 
 Blocked on you: attach Neon (`DATABASE_URL`), then `pnpm db:migrate && pnpm db:seed`, deploy, and make one real call.
 

@@ -14,6 +14,7 @@ import { HELLO, STRINGS, detectUiLang, type UiLang } from '@/lib/i18n';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
 import { ConnectingGreetings } from './ConnectingGreetings';
 import { AlertBar } from './AlertBar';
+import { HintStrip, RecordGuide } from './RecordGuide';
 
 export type TranscriptMessage = {
   turn_id?: string | number;
@@ -51,6 +52,9 @@ export function VoiceScreen({
   const [tab, setTab] = useState<'talk' | 'result'>('talk');
   const scrollRef = useRef<HTMLDivElement>(null);
   const seenVisit = useRef<string | null>(null);
+  // How long a visit took: from her first words in this call to the moment the visit shows up as saved.
+  const firstWordsAt = useRef<number | null>(null);
+  const [recordedSeconds, setRecordedSeconds] = useState<number | null>(null);
 
   const messages = useMemo(
     () => (currentInProgressMessage ? [...messageList, currentInProgressMessage] : messageList),
@@ -77,12 +81,24 @@ export function VoiceScreen({
     if (node) node.scrollTop = node.scrollHeight;
   }, [messages, tab]);
 
+  // Note the moment she first speaks.
+  useEffect(() => {
+    if (firstWordsAt.current != null) return;
+    if (messages.some((m) => String(m.uid) !== agentUID && (m.text ?? '').trim().length > 0)) firstWordsAt.current = Date.now();
+  }, [messages, agentUID]);
+
   // When a new visit is saved, bring the result into view on phones (desktop always shows both).
   const visit = snapshot?.visit ?? null;
   useEffect(() => {
     if (visit && visit.id !== seenVisit.current) {
       seenVisit.current = visit.id;
       setTab('result');
+      if (firstWordsAt.current != null) {
+        setRecordedSeconds(Math.max(1, Math.round((Date.now() - firstWordsAt.current) / 1000)));
+        firstWordsAt.current = null; // the next visit in this call is timed from her next words
+      } else {
+        setRecordedSeconds(null);
+      }
     }
   }, [visit]);
 
@@ -184,6 +200,7 @@ export function VoiceScreen({
         )}
         aria-label="Conversation"
       >
+        {!visit && <HintStrip s={s} />}
         {messages.length === 0 ? (
           <p className="m-auto max-w-[16rem] text-center text-base text-asha-muted">{s.empty}</p>
         ) : (
@@ -244,13 +261,12 @@ export function VoiceScreen({
         {visit && snapshot ? (
           <div className="space-y-6 pb-4">
             <AlertBar visit={visit} s={s} />
+            <RecordGuide visit={visit} seconds={recordedSeconds} s={s} />
             <RiskResult visit={visit} events={snapshot.events} s={s} />
             <AlertSent visit={visit} remaining={snapshot.remaining} s={s} />
           </div>
         ) : (
-          <p className="mx-auto mt-6 max-w-xs text-center text-base text-asha-muted lg:mt-2">
-            {s.visitEmpty}
-          </p>
+          <RecordGuide visit={null} s={s} />
         )}
       </div>
     </div>
