@@ -31,7 +31,7 @@ export function rowsForDoc(doc: KbDoc): Row[] {
 
 export function loadKnowledge(dir = 'knowledge'): KbDoc[] {
   return readdirSync(dir)
-    .filter((n) => n.endsWith('.md') && n !== 'RULES_EVIDENCE.md')
+    .filter((n) => n.endsWith('.md') && n !== 'RULES_EVIDENCE.md' && n !== 'README.md')
     .sort()
     .map((n) => parseKnowledgeFile(readFileSync(path.join(dir, n), 'utf8')));
 }

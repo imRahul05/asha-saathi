@@ -26,7 +26,7 @@ async function loadPdf(url: string): Promise<string[]> {
 
 (async () => {
   let failures = 0;
-  for (const f of readdirSync(DIR).filter((n) => n.endsWith('.md') && n !== 'RULES_EVIDENCE.md')) {
+  for (const f of readdirSync(DIR).filter((n) => n.endsWith('.md') && n !== 'RULES_EVIDENCE.md' && n !== 'README.md')) {
     const doc = parseKnowledgeFile(readFileSync(path.join(DIR, f), 'utf8'));
     let pages: string[];
     try {
