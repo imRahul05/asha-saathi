@@ -120,6 +120,7 @@ export const ml: Strings = {
   daysLater: (n) => `${n} ദിവസം കഴിഞ്ഞ്`,
   remainingT: 'ഇന്ന് ബാക്കിയുള്ള സന്ദർശനങ്ങൾ',
   callDoctor: (d) => `${d} യോട് സംസാരിക്കൂ`,
+  doctorJoined: (d) => `${d} കോളിൽ ചേർന്നു`,
   callFailed: 'കോൾ ലിങ്ക് ഉണ്ടാക്കാനായില്ല. വീണ്ടും ശ്രമിക്കൂ.',
   statVisits: 'ഇന്നത്തെ സന്ദർശനങ്ങൾ',
   statAlerts: 'അയച്ച മുന്നറിയിപ്പുകൾ',

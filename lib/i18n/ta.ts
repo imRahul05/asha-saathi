@@ -120,6 +120,7 @@ export const ta: Strings = {
   daysLater: (n) => `${n} நாட்களில்`,
   remainingT: 'இன்று மீதமுள்ள வருகைகள்',
   callDoctor: (d) => `${d} உடன் பேசுங்கள்`,
+  doctorJoined: (d) => `${d} அழைப்பில் இணைந்தார்`,
   callFailed: 'அழைப்பு இணைப்பு உருவாகவில்லை. மீண்டும் முயற்சிக்கவும்.',
   statVisits: 'இன்றைய வருகைகள்',
   statAlerts: 'அனுப்பிய எச்சரிக்கைகள்',

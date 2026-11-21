@@ -120,6 +120,7 @@ export const mr: Strings = {
   daysLater: (n) => `${n} दिवसांनी`,
   remainingT: 'आजच्या उरलेल्या भेटी',
   callDoctor: (d) => `${d} यांच्याशी बोला`,
+  doctorJoined: (d) => `${d} कॉलमध्ये सामील झाले`,
   callFailed: 'कॉल लिंक तयार झाली नाही. पुन्हा प्रयत्न करा.',
   statVisits: 'आजच्या भेटी',
   statAlerts: 'पाठवलेले अलर्ट',

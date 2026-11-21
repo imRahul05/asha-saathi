@@ -128,6 +128,7 @@ export const en = {
   daysLater: (n: number) => `in ${n} days`,
   remainingT: 'Visits left today',
   callDoctor: (doctor: string) => `Talk to ${doctor}`,
+  doctorJoined: (doctor: string) => `${doctor} joined the call`,
   callFailed: 'Could not create the call link. Try again.',
   // ---- projector dashboard
   statVisits: 'Visits today',

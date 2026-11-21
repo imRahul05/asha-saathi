@@ -120,6 +120,7 @@ export const bn: Strings = {
   daysLater: (n) => `${n} দিন পরে`,
   remainingT: 'আজকের বাকি ভিজিট',
   callDoctor: (d) => `${d}-এর সঙ্গে কথা বলুন`,
+  doctorJoined: (d) => `${d} কলে যোগ দিয়েছেন`,
   callFailed: 'কল লিংক তৈরি হয়নি। আবার চেষ্টা করুন।',
   statVisits: 'আজকের ভিজিট',
   statAlerts: 'পাঠানো সতর্কবার্তা',

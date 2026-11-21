@@ -20,6 +20,7 @@ export function describeEvent(e: Pick<EventRow, 'name' | 'ok' | 'input' | 'outpu
       const ps = Array.isArray(out.passages) ? (out.passages as Array<{ source?: string; page?: string }>) : [];
       return ps.length ? `source: ${ps[0].source ?? ''}, p.${ps[0].page ?? ''}` : 'no guideline found, referred to MO';
     }
+    case 'doctorCall': return `${inp.role === 'doctor' ? 'doctor' : 'ASHA'} ${inp.event === 'left' ? 'left' : 'joined'}`;
     case 'getBeneficiaryHistory': return `${Array.isArray(out.visits) ? out.visits.length : 0} earlier visits`;
     default: return '';
   }
@@ -31,6 +32,15 @@ async function toSnapshotVisit(db: Db, v: Visit, ashaName: { doctor: string | nu
   const alerts = await alertsForVisit(db, v.id);
   // Prefer a sent alert, then the newest draft/failed one.
   const alert = alerts.find((a) => a.status === 'sent') ?? alerts[0] ?? null;
+  const calls = v.sessionId
+    ? await db.query<Row>(
+        `select input, created_at from events where asha_id = $1 and session_id = $2 and name = 'doctorCall' and ok order by id asc`,
+        [v.ashaId, v.sessionId],
+      )
+    : [];
+  const iso = (d: unknown) => (d instanceof Date ? d.toISOString() : String(d));
+  const doctorJoin = calls.find((c) => (c.input as Record<string, unknown> | null)?.role === 'doctor' && (c.input as Record<string, unknown>).event === 'joined');
+  const call = { doctorJoinedAt: doctorJoin ? iso(doctorJoin.created_at) : null, lastEventAt: calls.length ? iso(calls[calls.length - 1].created_at) : null };
   const fu = await db.query<Row>('select due_date, reason from followups where visit_id = $1 order by created_at desc limit 1', [v.id]);
   const parity = b?.parity == null ? null : Number(b.parity);
   return {
@@ -40,6 +50,7 @@ async function toSnapshotVisit(db: Db, v: Visit, ashaName: { doctor: string | nu
       name: String(b?.name ?? ''), village: (b?.village as string) ?? null, weeks: v.gestationWeeks,
       age: b?.age == null ? null : Number(b.age), firstPregnancy: parity == null ? null : parity === 0,
     },
+    call,
     vitals: { bpSys: v.bpSys, bpDia: v.bpDia, hb: v.hb, symptoms: v.symptoms },
     risk: {
       level: v.riskLevel,

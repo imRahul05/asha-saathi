@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestDb } from '@/lib/db/test-db';
 import type { Db } from '@/lib/db/client';
-import { insertBeneficiary } from '@/lib/db/repo';
+import { insertBeneficiary, logEvent } from '@/lib/db/repo';
 import { consoleNotifier } from '@/lib/notify';
 import { executeTool, type ToolContext } from '@/lib/tools';
 import { draftAlert, recordVisit, scheduleFollowUp, sendAlert } from '@/lib/tools/tools';
@@ -49,6 +49,17 @@ describe('getSnapshot', () => {
     expect(s.events[0].note).toBe('risk: high');
     expect(s.counts).toEqual({ visits: 1, highRisk: 1, alertsSent: 1, followUps: 1 });
     expect(s.remaining.map((r) => r.name)).toEqual(['Pooja K']); // Sunita was visited today
+  });
+
+  it('shows a doctor call on the visit and in the timeline', async () => {
+    expect((await getSnapshot(db, { sessionId: 'call-snap-1' })).visit?.call).toEqual({ doctorJoinedAt: null, lastEventAt: null });
+    await logEvent(db, { sessionId: 'call-snap-1', ashaId, type: 'call', name: 'doctorCall', input: { role: 'asha', event: 'joined' }, ok: true });
+    expect((await getSnapshot(db, { sessionId: 'call-snap-1' })).visit?.call.doctorJoinedAt).toBeNull();
+    await logEvent(db, { sessionId: 'call-snap-1', ashaId, type: 'call', name: 'doctorCall', input: { role: 'doctor', event: 'joined' }, ok: true });
+    const s = await getSnapshot(db, { sessionId: 'call-snap-1' });
+    expect(s.visit?.call.doctorJoinedAt).toEqual(expect.any(String));
+    expect(s.visit?.call.lastEventAt).toEqual(expect.any(String));
+    expect(s.events.slice(-2).map((e) => e.note)).toEqual(['ASHA joined', 'doctor joined']);
   });
 
   it('a different call does not see this call\'s visit, but the dashboard (no session) does', async () => {

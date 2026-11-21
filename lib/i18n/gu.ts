@@ -120,6 +120,7 @@ export const gu: Strings = {
   daysLater: (n) => `${n} દિવસ પછી`,
   remainingT: 'આજની બાકી મુલાકાતો',
   callDoctor: (d) => `${d} સાથે વાત કરો`,
+  doctorJoined: (d) => `${d} કોલમાં જોડાયા`,
   callFailed: 'કૉલ લિંક બની નહીં. ફરી પ્રયત્ન કરો.',
   statVisits: 'આજની મુલાકાતો',
   statAlerts: 'મોકલેલી ચેતવણીઓ',

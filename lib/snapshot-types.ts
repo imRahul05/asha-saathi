@@ -13,6 +13,8 @@ export type SnapshotVisit = {
     reasons: { code: string; text: string; level: RiskLevel; citation: { label: string; page?: string } | null }[];
   };
   alert: null | { status: 'draft' | 'sent' | 'failed'; channel: string | null; doctor: string | null; phc: string | null; message: string; sentAt: string | null; error: string | null };
+  /** Doctor call activity for this visit's session, from `doctorCall` events. Both null when no call happened. */
+  call: { doctorJoinedAt: string | null; lastEventAt: string | null };
   followUp: null | { dueDate: string; reason: string | null };
 };
 
