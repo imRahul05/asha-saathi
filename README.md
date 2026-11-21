@@ -78,6 +78,10 @@ pnpm kb:check                       # retrieval regression: right passage found,
 
 See [knowledge/README.md](knowledge/README.md) for the quote rules and the update steps (also available as the `kb-update` skill).
 
+## Changing how Saathi greets
+
+Each language's greeting is defined once in `lib/languages.ts` as three parts: `hello`, `address` (the local word for elder sister: दीदी, ಅಕ್ಕ, அக்கா, "sister" in English, and so on) and `ask` (the first question). The spoken greeting, the prompt's address rule, the on-screen hello labels, the connecting animation, the landing page greetings and the voice samples are all built from those three, so edit them there only, then run `pnpm voice:samples --force` to refresh the samples. A test fails if a voice sample is missing.
+
 ## Local testing
 
 Sign-in, the screens and the tests work on `localhost`. The **voice agent does not**: Agora's cloud calls your tool server over the internet and rejects `localhost` ("URL host localhost is blocked"). To test a call from your machine set `PUBLIC_BASE_URL` in `.env.local` to either:
