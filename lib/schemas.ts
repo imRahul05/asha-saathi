@@ -23,7 +23,7 @@ export const SYMPTOMS = [
 export const Symptom = z.enum(SYMPTOMS);
 export type Symptom = z.infer<typeof Symptom>;
 
-const visitShape = {
+export const visitShape = {
   gestationWeeks: z.number().int().min(4).max(42).optional().describe('Weeks of pregnancy. 7 months is about 28 weeks.'),
   bpSys: z.number().int().min(60).max(260).optional().describe('Upper (systolic) blood pressure, e.g. 150'),
   bpDia: z.number().int().min(30).max(160).optional().describe('Lower (diastolic) blood pressure, e.g. 100'),

@@ -49,3 +49,24 @@ export async function guardDemoSignIn(db: Db, ipHash: string, limits: Limits = l
   await db.query(`insert into agent_starts (kind, asha_id, ip_hash) values ('demo', null, $1)`, [ipHash]);
   return { ok: true };
 }
+
+// Visit Scribe costs speech-to-text minutes and model tokens for every recording processed, so it has its own limits.
+export type ScribeLimits = { perAshaHour: number; perIpHour: number; globalDay: number };
+
+export function scribeLimitsFromEnv(env: NodeJS.ProcessEnv = process.env): ScribeLimits {
+  const n = (v: string | undefined, d: number) => (v && Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : d);
+  return { perAshaHour: n(env.SCRIBE_PER_ASHA_HOUR, 6), perIpHour: n(env.SCRIBE_PER_IP_HOUR, 12), globalDay: n(env.SCRIBE_PER_DAY, 100) };
+}
+
+/** Counts one recording being processed, unless a limit is reached. */
+export async function guardScribe(db: Db, who: { ashaId: string; ipHash: string }, limits: ScribeLimits = scribeLimitsFromEnv()): Promise<GuardResult> {
+  const [perAsha, perIp, today] = await Promise.all([
+    count(db, `select count(*) n from agent_starts where kind='scribe' and asha_id=$1 and created_at > now() - interval '1 hour'`, [who.ashaId]),
+    count(db, `select count(*) n from agent_starts where kind='scribe' and ip_hash=$1 and created_at > now() - interval '1 hour'`, [who.ipHash]),
+    count(db, `select count(*) n from agent_starts where kind='scribe' and created_at > now() - interval '1 day'`, []),
+  ]);
+  if (today >= limits.globalDay) return { ok: false, message: 'The demo has reached its daily limit for recordings. Please try again tomorrow.', retryAfterSeconds: 3600 };
+  if (perAsha >= limits.perAshaHour || perIp >= limits.perIpHour) return { ok: false, message: 'You have sent a lot of recordings. Please wait a little and try again.', retryAfterSeconds: 600 };
+  await db.query(`insert into agent_starts (kind, asha_id, ip_hash) values ('scribe', $1, $2)`, [who.ashaId, who.ipHash]);
+  return { ok: true };
+}
