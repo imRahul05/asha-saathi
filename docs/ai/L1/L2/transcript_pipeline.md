@@ -50,8 +50,15 @@ Fallback parser:
 
 - Raw RTM `message` listener parses JSON payloads for `message.error` and `message.sal_status` to catch issues not raised via higher-level events.
 
+## Catch-up buffer (missed early captions)
+
+- `AgoraVoiceAI` only listens for RTM messages after `subscribeMessage()`, which runs after the call screen mounts, RTC joins and the toolkit initialises. Messages sent before that (usually the greeting) were lost: heard, never shown. The 14 s watchdog restart did not recover them.
+- `LandingPage` starts `startRtmBuffer(rtm)` before `rtm.login` and passes it to `ConversationComponent`. After `ai.subscribeMessage()` the component calls `replayBufferedMessages(ai, buffer.events)`, which feeds the recorded raw events to the toolkit's `_handleRtmMessage` in order. The same replay rebuilds the transcript when the watchdog restarts the toolkit.
+- `_handleRtmMessage` is private in the toolkit typings. `lib/rtm-buffer.test.ts` fails if a toolkit upgrade removes it. The console line `[captions] caught up on N earlier message(s)` shows how many were rescued.
+
 ## Coupled Files
 
+- `lib/rtm-buffer.ts`: records RTM messages from login and replays them to a freshly started `AgoraVoiceAI`.
 - `components/ConversationComponent.tsx`: event subscriptions and issue collection.
 - `lib/conversation.ts`: transcript + visualizer mapping transforms.
 - `components/QuickstartTranscriptPanel.tsx`: transcript render sink.

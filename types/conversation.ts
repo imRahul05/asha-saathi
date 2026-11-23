@@ -36,6 +36,8 @@ export interface ConversationComponentProps {
   rtmClient: RTMClient;
   onTokenWillExpire: (uid: string) => Promise<AgoraRenewalTokens>;
   onEndConversation: () => void;
+  /** Every RTM message since login; replayed to the caption reader so lines sent before it started listening still appear. */
+  rtmBuffer?: { events: unknown[] } | null;
   /** End this call and start a new one with the same language and voice. `auto` is true for the automatic retry. */
   onRestart?: (auto?: boolean) => Promise<void> | void;
   /** Whether one more automatic retry is still allowed for this call */
