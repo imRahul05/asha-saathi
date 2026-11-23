@@ -162,6 +162,7 @@ pnpm demo:reset --yes --force         # same, even if an agent started in the la
 | `lib/tools/` | the 11 tools the agent can call (find, history, record, `amendLastVisit`, `holdAlert`, follow-up, today, `upcomingVisits`, draft and send alert, guideline search), and the registry both the server and the agent share |
 | `app/api/mcp/route.ts` | the MCP tool server Agora's model calls (Bearer secret, scoped to one ASHA and one call) |
 | `app/api/invite-agent/route.ts` | starts the voice agent (managed speech + model, Murf voice, our tools) |
+| `lib/scribe/`, `app/api/scribe/` | Visit Scribe (in progress, feature branch `feat/voice-transcriptor`): a recorded visit becomes text, then checked visit details the ASHA confirms. Server pipeline only so far; see `docs/ai/L1/L2/voice_transcriptor.md` |
 | `lib/db/`, `db/schema.sql` | database client (Neon or local Postgres), repository, schema |
 | `lib/snapshot.ts`, `app/api/session/state`, `app/api/dashboard` | what the screens read |
 | `components/landing/`, `components/asha/` | landing page, voice screen, result and dashboard screens |

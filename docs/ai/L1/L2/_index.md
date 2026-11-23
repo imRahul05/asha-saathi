@@ -7,4 +7,5 @@
 | [invite_agent_config.md](invite_agent_config.md) | Managed agent prompt, VAD, model/provider chain, and session options | Editing agent behavior, BYOK provider wiring, or voice config |
 | [strict_mode_lifecycle.md](strict_mode_lifecycle.md) | React StrictMode-safe RTC/toolkit initialization patterns | Modifying `useJoin`, mic track lifecycle, or `AgoraVoiceAI.init` timing |
 | [token_model.md](token_model.md) | RTC+RTM token build/renewal model and failure modes | Changing token minting, renewal, UID/channel semantics, or expiry |
+| [voice_transcriptor.md](voice_transcriptor.md) | Visit Scribe: recorded visit to checked visit details (routes, safety checks, swappable speech and model steps) | Changing `app/api/scribe`, `lib/scribe`, or the scribe tables |
 | [transcript_pipeline.md](transcript_pipeline.md) | Transcript/event normalization from AgoraVoiceAI and RTM fallback parsing | Changing transcript rendering, metrics/error handling, or RTM integration |

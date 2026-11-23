@@ -86,11 +86,14 @@ create index if not exists followups_due_idx on followups (asha_id, status, due_
 -- Usage guard: every agent start and demo sign-in is counted, so one visitor cannot burn the free Agora minutes.
 create table if not exists agent_starts (
   id          bigserial primary key,
-  kind        text not null default 'agent' check (kind in ('agent', 'demo')),
+  kind        text not null default 'agent' check (kind in ('agent', 'demo', 'scribe')),
   asha_id     uuid,
   ip_hash     text,
   created_at  timestamptz not null default now()
 );
+-- Databases created before Visit Scribe only allow 'agent' and 'demo': widen the check.
+alter table agent_starts drop constraint if exists agent_starts_kind_check;
+alter table agent_starts add constraint agent_starts_kind_check check (kind in ('agent', 'demo', 'scribe'));
 create index if not exists agent_starts_time_idx on agent_starts (created_at desc);
 create index if not exists agent_starts_ip_idx on agent_starts (ip_hash, created_at desc);
 create index if not exists agent_starts_asha_idx on agent_starts (asha_id, created_at desc);
@@ -128,3 +131,33 @@ create table if not exists kb_chunks (
 );
 create index if not exists kb_chunks_tsv_idx on kb_chunks using gin (tsv);
 create index if not exists kb_chunks_doc_idx on kb_chunks (doc_id);
+
+-- Visit Scribe: a recorded home visit that becomes text, then a visit record the ASHA checks.
+-- Audio pieces are kept (as base64 text, which every database driver handles the same way) only until the recording has been transcribed.
+create table if not exists visit_scribes (
+  id           uuid primary key default gen_random_uuid(),
+  asha_id      uuid not null references ashas(id) on delete cascade,
+  client_id    text not null,
+  language     text not null default 'hi',
+  mime         text not null,
+  status       text not null default 'recording' check (status in ('recording', 'processing', 'ready', 'saved', 'failed', 'discarded')),
+  chunk_count  int,
+  duration_sec int,
+  transcript   jsonb,
+  extraction   jsonb,
+  checked      jsonb,
+  candidates   jsonb not null default '[]',
+  error_code   text,
+  visit_id     uuid references visits(id) on delete set null,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  unique (asha_id, client_id)
+);
+create index if not exists visit_scribes_asha_idx on visit_scribes (asha_id, created_at desc);
+
+create table if not exists scribe_chunks (
+  scribe_id uuid not null references visit_scribes(id) on delete cascade,
+  idx       int not null,
+  data_b64  text not null,
+  primary key (scribe_id, idx)
+);
