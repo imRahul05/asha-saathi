@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestDb } from '@/lib/db/test-db';
 import type { Db } from '@/lib/db/client';
 import { insertBeneficiary, getBeneficiary, firstAsha, mostRecentlyActiveAshaId, logEvent } from '@/lib/db/repo';
-import { cookieFromHeader, newSession, sessionCookieHeader, signSession, verifySession } from './session';
+import { cookieFromHeader, hmacScoped, newSession, sessionCookieHeader, sessionRole, signSession, verifySession } from './session';
+import { requireRole } from './require';
 import { createDemoAsha, NoTemplateError } from './demo';
 import { guardAgentStart, guardDemoSignIn, hashIp, limitsFromEnv, type Limits } from '@/lib/guard';
 
@@ -39,6 +40,47 @@ describe('signed session cookie', () => {
     expect(header).toMatch(/HttpOnly/);
     expect(header).toMatch(/SameSite=Lax/);
     expect(sessionCookieHeader('', { clear: true })).toMatch(/Max-Age=0/);
+  });
+  it('round-trips explicit roles and defaults legacy sessions to asha', () => {
+    const legacy = newSession('11111111-1111-4111-8111-111111111111', 'demo');
+    expect(legacy.role).toBeUndefined();
+    expect(sessionRole(legacy)).toBe('asha');
+    expect(verifySession(signSession(legacy))).toEqual(legacy);
+
+    const doc = newSession('11111111-1111-4111-8111-111111111111', 'demo', Date.now(), 'doctor');
+    expect(doc.role).toBe('doctor');
+    expect(sessionRole(doc)).toBe('doctor');
+    expect(verifySession(signSession(doc))).toEqual(doc);
+
+    const asha = newSession('11111111-1111-4111-8111-111111111111', 'user', Date.now(), 'asha');
+    expect(verifySession(signSession(asha))).toEqual(asha);
+  });
+  it('rejects tampered or invalid roles', () => {
+    const ashaCookie = signSession(newSession('a', 'demo', Date.now(), 'asha'));
+    const [, sig] = ashaCookie.split('.');
+    const escalated = Buffer.from(JSON.stringify({ ashaId: 'a', mode: 'demo', exp: Math.floor(Date.now() / 1000) + 3600, role: 'doctor' })).toString('base64url');
+    expect(verifySession(`${escalated}.${sig}`)).toBeNull();
+
+    const invalidRolePayload = Buffer.from(JSON.stringify({ ashaId: 'a', mode: 'demo', exp: Math.floor(Date.now() / 1000) + 3600, role: 'admin' })).toString('base64url');
+    const validSigForInvalidRole = hmacScoped('session', invalidRolePayload);
+    expect(verifySession(`${invalidRolePayload}.${validSigForInvalidRole}`)).toBeNull();
+  });
+  it('enforces role checks via requireRole', () => {
+    const ashaCookie = signSession(newSession('a', 'demo', Date.now(), 'asha'));
+    const docCookie = signSession(newSession('a', 'demo', Date.now(), 'doctor'));
+
+    const ashaReq = new Request('http://localhost/api/asha/overview', { headers: { cookie: `asha_session=${encodeURIComponent(ashaCookie)}` } });
+    const docReq = new Request('http://localhost/api/doctor/overview', { headers: { cookie: `asha_session=${encodeURIComponent(docCookie)}` } });
+
+    expect(requireRole(ashaReq, 'asha').ok).toBe(true);
+    const forbiddenDoc = requireRole(ashaReq, 'doctor');
+    expect(forbiddenDoc.ok).toBe(false);
+    if (!forbiddenDoc.ok) expect(forbiddenDoc.response.status).toBe(403);
+
+    expect(requireRole(docReq, 'doctor').ok).toBe(true);
+    const forbiddenAsha = requireRole(docReq, 'asha');
+    expect(forbiddenAsha.ok).toBe(false);
+    if (!forbiddenAsha.ok) expect(forbiddenAsha.response.status).toBe(403);
   });
 });
 

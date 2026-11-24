@@ -5,7 +5,13 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 export const SESSION_COOKIE = 'asha_session';
 export const SESSION_TTL_SECONDS = 8 * 60 * 60;
 
-export type Session = { ashaId: string; mode: 'demo' | 'user'; exp: number };
+export type UserRole = 'asha' | 'doctor';
+
+export type Session = { ashaId: string; mode: 'demo' | 'user'; exp: number; role?: UserRole };
+
+export function sessionRole(s: Session): UserRole {
+  return s.role ?? 'asha';
+}
 
 let warnedDevSecret = false;
 function secret(): string {
@@ -44,15 +50,16 @@ export function verifySession(value: string | undefined | null, nowMs: number = 
   try {
     const s = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as Partial<Session>;
     if (typeof s.ashaId !== 'string' || (s.mode !== 'demo' && s.mode !== 'user') || typeof s.exp !== 'number') return null;
+    if (s.role !== undefined && s.role !== 'asha' && s.role !== 'doctor') return null;
     if (s.exp * 1000 < nowMs) return null;
-    return { ashaId: s.ashaId, mode: s.mode, exp: s.exp };
+    return { ashaId: s.ashaId, mode: s.mode, exp: s.exp, ...(s.role ? { role: s.role } : {}) };
   } catch {
     return null;
   }
 }
 
-export function newSession(ashaId: string, mode: Session['mode'], nowMs: number = Date.now()): Session {
-  return { ashaId, mode, exp: Math.floor(nowMs / 1000) + SESSION_TTL_SECONDS };
+export function newSession(ashaId: string, mode: Session['mode'], nowMs: number = Date.now(), role?: UserRole): Session {
+  return { ashaId, mode, exp: Math.floor(nowMs / 1000) + SESSION_TTL_SECONDS, ...(role !== undefined ? { role } : {}) };
 }
 
 export function cookieFromHeader(header: string | null | undefined, name: string = SESSION_COOKIE): string | undefined {

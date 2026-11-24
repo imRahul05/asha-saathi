@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, Suspense, useEffect, useCallback } from 'react';
+import { useState, useRef, Suspense, useEffect, useCallback, useSyncExternalStore } from 'react';
 import dynamic from 'next/dynamic';
 import type { RTMClient } from 'agora-rtm';
 import type {
@@ -12,11 +12,32 @@ import type {
 import { ErrorBoundary } from './ErrorBoundary';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { StartScreen } from './asha/StartScreen';
+import { AshaWorkspace } from './asha/AshaWorkspace';
 import { DEFAULT_LANGUAGE, type LangCode } from '@/lib/languages';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
 import { defaultVoice, resolveVoice } from '@/lib/voices';
 import { startRtmBuffer, type RtmBuffer } from '@/lib/rtm-buffer';
 import { useVoicePreview } from '@/hooks/use-voice-preview';
+import { useAshaOverview } from '@/hooks/use-asha-overview';
+
+const SETUP_DONE_KEY = 'asha_setup_done';
+
+function subscribeSetupDone(cb: () => void): () => void {
+  window.addEventListener('storage', cb);
+  return () => window.removeEventListener('storage', cb);
+}
+
+function getSetupDoneSnapshot(): boolean {
+  try {
+    return window.localStorage.getItem(SETUP_DONE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function getSetupDoneServerSnapshot(): boolean {
+  return false;
+}
 
 // Dynamically import the ConversationComponent with ssr disabled
 const ConversationComponent = dynamic(() => import('./ConversationComponent'), {
@@ -60,6 +81,28 @@ const AgoraProvider = dynamic(
 
 export default function LandingPage() {
   const [showConversation, setShowConversation] = useState(false);
+  const {
+    overview,
+    isLoading: isOverviewLoading,
+    error: overviewError,
+    refresh: refreshOverview,
+  } = useAshaOverview();
+  const storedSetupDone = useSyncExternalStore(
+    subscribeSetupDone,
+    getSetupDoneSnapshot,
+    getSetupDoneServerSnapshot,
+  );
+  const [setupDismissed, setSetupDismissed] = useState(false);
+  const hasCompletedSetup = storedSetupDone || setupDismissed;
+
+  const markSetupDone = useCallback(() => {
+    try {
+      window.localStorage.setItem(SETUP_DONE_KEY, '1');
+    } catch {
+      /* ignore storage errors */
+    }
+    setSetupDismissed(true);
+  }, []);
 
   // Preload heavy modules on mount so they're already cached when the user
   // clicks "Try it Now" — eliminates the ~1.8s dynamic-import delay.
@@ -287,12 +330,43 @@ export default function LandingPage() {
     rtmClient?.logout().catch((err) => console.error('RTM logout error:', err));
     setRtmClient(null);
     setShowConversation(false);
+    refreshOverview();
   };
 
   return (
     <div className="relative h-dvh overflow-hidden bg-asha-cream text-asha-ink">
       {!showConversation ? (
-        <StartScreen isLoading={isLoading} error={error} onStart={handleStartConversation} language={language} onLanguageChange={pickLanguage} voice={voice} onVoiceChange={chooseVoice} playingVoice={playingVoice} />
+        hasCompletedSetup ? (
+          <AshaWorkspace
+            isStartingCall={isLoading}
+            callError={error}
+            onStartCall={handleStartConversation}
+            language={language}
+            onLanguageChange={pickLanguage}
+            voice={voice}
+            onVoiceChange={chooseVoice}
+            playingVoice={playingVoice}
+            overview={overview}
+            isOverviewLoading={isOverviewLoading}
+            overviewError={overviewError}
+            onRefreshOverview={refreshOverview}
+          />
+        ) : (
+          <StartScreen
+            isLoading={isLoading}
+            error={error}
+            onStart={() => {
+              markSetupDone();
+              void handleStartConversation();
+            }}
+            onSkipToWorkspace={markSetupDone}
+            language={language}
+            onLanguageChange={pickLanguage}
+            voice={voice}
+            onVoiceChange={chooseVoice}
+            playingVoice={playingVoice}
+          />
+        )
       ) : agoraData && rtmClient ? (
         <>
           {/* Non-fatal: the call screen still renders, but say exactly why the agent is missing. */}

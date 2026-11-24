@@ -13,8 +13,15 @@ const groupLabel = (s: Strings, g: ScheduleGroup) =>
 const relative = (s: Strings, days: number) =>
   days < 0 ? s.relOverdue(-days) : days === 0 ? s.relToday : days === 1 ? s.relTomorrow : s.relInDays(days);
 
+interface SchedulePanelProps {
+  schedule: SnapshotScheduleItem[];
+  s: Strings;
+  lang: UiLang;
+  onSelectItem?: (item: SnapshotScheduleItem) => void;
+}
+
 /** The planned follow-up visits, grouped by when they are due. */
-export function SchedulePanel({ schedule, s, lang }: { schedule: SnapshotScheduleItem[]; s: Strings; lang: UiLang }) {
+export function SchedulePanel({ schedule, s, lang, onSelectItem }: SchedulePanelProps) {
   const groups = useMemo(() => groupSchedule(schedule, todayInIndia()), [schedule]);
 
   if (groups.length === 0) {
@@ -37,26 +44,50 @@ export function SchedulePanel({ schedule, s, lang }: { schedule: SnapshotSchedul
               <span className={cn('rounded-full px-2.5 py-0.5 text-base font-bold', overdue ? 'bg-asha-red-soft text-asha-red' : 'bg-asha-sand text-asha-ink')}>{rows.length}</span>
             </h3>
             <ul className="space-y-2">
-              {rows.map(({ item, days }) => (
-                <li
-                  key={item.id}
-                  className={cn(
-                    'flex min-h-16 items-center justify-between gap-3 rounded-2xl border px-4 py-3',
-                    overdue ? 'border-asha-red/30 bg-asha-red-soft' : 'border-asha-line bg-white',
-                  )}
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-lg font-bold leading-6 text-asha-ink">{item.beneficiary.name}</p>
-                    <p className="truncate text-base leading-6 text-asha-ink/80">
-                      {[item.beneficiary.village, item.reason].filter(Boolean).join(' · ')}
-                    </p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className={cn('text-base font-bold leading-6', overdue ? 'text-asha-red' : 'text-asha-teal')}>{relative(s, days)}</p>
-                    <p className="text-base leading-6 text-asha-ink/80">{formatDueDate(item.dueDate, lang)}</p>
-                  </div>
-                </li>
-              ))}
+              {rows.map(({ item, days }) => {
+                const rowContent = (
+                  <>
+                    <div className="min-w-0">
+                      <p className="truncate text-lg font-bold leading-6 text-asha-ink">{item.beneficiary.name}</p>
+                      <p className="truncate text-base leading-6 text-asha-ink/80">
+                        {[item.beneficiary.village, item.reason].filter(Boolean).join(' · ')}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className={cn('text-base font-bold leading-6', overdue ? 'text-asha-red' : 'text-asha-teal')}>{relative(s, days)}</p>
+                      <p className="text-base leading-6 text-asha-ink/80">{formatDueDate(item.dueDate, lang)}</p>
+                    </div>
+                  </>
+                );
+
+                const baseClasses = cn(
+                  'flex min-h-16 items-center justify-between gap-3 rounded-2xl border px-4 py-3',
+                  overdue ? 'border-asha-red/30 bg-asha-red-soft' : 'border-asha-line bg-white',
+                );
+
+                if (onSelectItem) {
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={() => onSelectItem(item)}
+                        className={cn(
+                          baseClasses,
+                          'w-full text-left transition-colors hover:border-asha-teal/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-asha-teal',
+                        )}
+                      >
+                        {rowContent}
+                      </button>
+                    </li>
+                  );
+                }
+
+                return (
+                  <li key={item.id} className={baseClasses}>
+                    {rowContent}
+                  </li>
+                );
+              })}
             </ul>
           </section>
         );

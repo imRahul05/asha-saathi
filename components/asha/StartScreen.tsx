@@ -22,12 +22,23 @@ interface StartScreenProps {
   isLoading: boolean;
   error: string | null;
   onStart: () => void;
+  onSkipToWorkspace?: () => void;
   language: LangCode;
   onLanguageChange: (code: LangCode) => void;
   voice: string;
   onVoiceChange: (id: string) => void;
   /** id of the voice whose sample is playing right now, if any */
   playingVoice?: string | null;
+}
+
+const SETUP_DONE_KEY = 'asha_setup_done';
+
+function persistSetupDone() {
+  try {
+    window.localStorage.setItem(SETUP_DONE_KEY, '1');
+  } catch {
+    /* ignore storage errors */
+  }
 }
 
 interface StepDescriptor {
@@ -40,6 +51,7 @@ export function StartScreen({
   isLoading,
   error,
   onStart,
+  onSkipToWorkspace,
   language,
   onLanguageChange,
   voice,
@@ -96,6 +108,16 @@ export function StartScreen({
       setDirection('forward');
       setCurrentStep(2);
     }, 380);
+  }
+
+  function handleStartClick() {
+    persistSetupDone();
+    onStart();
+  }
+
+  function handleSkipClick() {
+    persistSetupDone();
+    onSkipToWorkspace?.();
   }
 
   async function signOut() {
@@ -329,7 +351,7 @@ export function StartScreen({
                   <SaathiAvatar
                     state={isLoading ? 'connecting' : playingVoice ? 'talking' : 'idle'}
                     label={isLoading ? s.connecting : s.startButton}
-                    onClick={onStart}
+                    onClick={handleStartClick}
                     disabled={isLoading}
                   />
 
@@ -356,6 +378,16 @@ export function StartScreen({
           <div className="mt-2 min-h-6 max-w-[20rem] text-sm text-asha-red" role={error ? 'alert' : undefined}>
             {error}
           </div>
+
+          {onSkipToWorkspace && !isLoading && (
+            <button
+              type="button"
+              onClick={handleSkipClick}
+              className="mt-1 rounded-full px-4 py-2 text-sm font-semibold text-asha-muted underline underline-offset-4 transition-colors hover:text-asha-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-asha-teal"
+            >
+              Skip to workspace
+            </button>
+          )}
         </div>
 
         <GoodToKnow s={s} className="w-full max-w-sm" />
