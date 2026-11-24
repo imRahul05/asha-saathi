@@ -10,6 +10,7 @@ import {
   verifyAnyCallLink,
   verifyCallLink,
 } from './link';
+import { formatTelegramHtml } from '@/lib/notify';
 
 process.env.SESSION_SECRET = 'test-call-link-secret-0123456789';
 
@@ -154,5 +155,13 @@ describe('lib/call/link', () => {
 
     expect(callChannel('visit-1')).toBe('call-visit-1');
     expect(directCallChannel('direct-99')).toBe('direct-direct-99');
+  });
+
+  it('wraps raw /call/ URLs in Telegram HTML anchor tags', () => {
+    const rawUrl = 'https://asha-saathi.vercel.app/call/eyJ2aXNpdElkIjoiMSJ9.sig123';
+    const html = formatTelegramHtml(`HIGH RISK: ANC visit\nTap to connect: ${rawUrl}`);
+    expect(html).toContain('<b>HIGH RISK: ANC visit</b>');
+    expect(html).toContain(`<a href="${rawUrl}">Join Voice Call</a>`);
+    expect(html).not.toContain(`Tap to connect: ${rawUrl}`);
   });
 });

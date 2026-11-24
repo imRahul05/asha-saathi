@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
       if (summary.mother && summary.mother !== 'Direct consultation') {
         lines.push(`Mother: ${summary.mother}${summary.village ? `, ${summary.village}` : ''}`);
       }
-      lines.push(`Join voice call in browser: ${peerUrl}`);
+      lines.push(`Tap to connect: ${peerUrl}`);
       try {
         await telegramNotifier().send(
           { name: doctorName, phone: asha?.doctorPhone ?? null },

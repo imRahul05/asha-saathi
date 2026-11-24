@@ -26,6 +26,13 @@ function boldHeadline(text: string, open: string, close: string): string {
   return lines.join('\n');
 }
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const CALL_URL_RE = /https?:\/\/[^\s<>"']+\/call\/[^\s<>"']+/g;
+
+/** Formats plain alert text as Telegram HTML: bold headline and clickable voice-call links instead of raw URLs. */
+export function formatTelegramHtml(message: string): string {
+  const escaped = boldHeadline(escapeHtml(message), '<b>', '</b>');
+  return escaped.replace(CALL_URL_RE, (url) => `<a href="${url}">Join Voice Call</a>`);
+}
 
 /**
  * Twilio through the plain REST API (no SDK). Tries the channels in TWILIO_CHANNELS order (default "whatsapp,sms"):
@@ -124,7 +131,7 @@ export function telegramNotifier(env: NodeJS.ProcessEnv = process.env): Notifier
       const res = await fetch(`${base}/bot${token}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: boldHeadline(escapeHtml(message), '<b>', '</b>'), parse_mode: 'HTML', disable_web_page_preview: true }),
+        body: JSON.stringify({ chat_id: chatId, text: formatTelegramHtml(message), parse_mode: 'HTML', disable_web_page_preview: true }),
         signal: AbortSignal.timeout(6000),
       });
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; description?: string; error_code?: number; result?: { message_id?: number } };
