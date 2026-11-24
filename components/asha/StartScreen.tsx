@@ -14,6 +14,8 @@ import { GoodToKnow } from './RecordGuide';
 import { VoicePicker } from './VoicePicker';
 import { VOICES, resolveVoice } from '@/lib/voices';
 import { cn } from '@/lib/utils';
+import { SETUP_DONE_COOKIE, writePrefCookie } from '@/lib/client-prefs';
+import { clearOfflineCache } from '@/lib/offline-cache';
 
 type StepNumber = 1 | 2 | 3;
 type SlideDirection = 'none' | 'forward' | 'backward';
@@ -31,14 +33,8 @@ interface StartScreenProps {
   playingVoice?: string | null;
 }
 
-const SETUP_DONE_KEY = 'asha_setup_done';
-
 function persistSetupDone() {
-  try {
-    window.localStorage.setItem(SETUP_DONE_KEY, '1');
-  } catch {
-    /* ignore storage errors */
-  }
+  writePrefCookie(SETUP_DONE_COOKIE, '1');
 }
 
 interface StepDescriptor {
@@ -121,7 +117,10 @@ export function StartScreen({
   }
 
   async function signOut() {
-    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
+    await Promise.all([
+      clearOfflineCache(),
+      fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined),
+    ]);
     router.push('/login');
   }
 

@@ -16,10 +16,12 @@ import {
   Stethoscope,
   TriangleAlert,
   Users,
+  WifiOff,
 } from 'lucide-react';
 import { BrandMark } from '@/components/BrandMark';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
 import { useDoctorOverview } from '@/hooks/use-doctor-overview';
+import { clearOfflineCache } from '@/lib/offline-cache';
 import { dueNowCount, formatDueDate, todayInIndia } from '@/lib/asha/schedule';
 import type { DoctorOverview, DoctorVisitCase, PatientSummary, PatientVisitSummary } from '@/lib/overview-types';
 import type { RiskLevel, SnapshotEvent, SnapshotVisit } from '@/lib/snapshot-types';
@@ -130,13 +132,16 @@ function isHighRisk(level: RiskLevel): boolean {
 export function Dashboard({ isDoctorSession = false, dashboardKey = null }: DashboardProps) {
   const router = useRouter();
   const { s, uiLang } = useLanguage();
-  const { overview, error, isLoading, refresh } = useDoctorOverview(dashboardKey);
+  const { overview, error, isLoading, isOffline, cachedAt, refresh } = useDoctorOverview(dashboardKey);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await Promise.all([
+        clearOfflineCache(),
+        fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined),
+      ]);
     } finally {
       router.push('/login');
       router.refresh();
@@ -160,6 +165,28 @@ export function Dashboard({ isDoctorSession = false, dashboardKey = null }: Dash
       />
 
       <main className="mx-auto mt-6 max-w-7xl">
+        {isOffline && overview && (
+          <div
+            role="status"
+            className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-asha-amber/60 bg-asha-amber/40 px-4 py-2.5 text-sm text-[#7A4E0A]"
+          >
+            <div className="flex items-center gap-2 font-medium">
+              <WifiOff className="h-4 w-4 shrink-0" aria-hidden />
+              <span>
+                Offline — showing last saved PHC data
+                {cachedAt ? ` (${formatIndiaDateTime(cachedAt)})` : ''}. Will refresh automatically when online.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={refresh}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-bold text-[#7A4E0A] shadow-sm hover:bg-asha-cream"
+            >
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+              Refresh
+            </button>
+          </div>
+        )}
         {error === 'UNAUTHORIZED' ? (
           <Notice
             title="Doctor sign-in required"

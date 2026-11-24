@@ -14,8 +14,10 @@ import {
   SlidersHorizontal,
   TriangleAlert,
   Users,
+  WifiOff,
   X,
 } from 'lucide-react';
+import { clearOfflineCache } from '@/lib/offline-cache';
 import { SaathiAvatar } from './SaathiAvatar';
 import { ConnectingGreetings } from './ConnectingGreetings';
 import { GoodToKnow } from './RecordGuide';
@@ -46,6 +48,8 @@ export interface AshaWorkspaceProps {
   overview: AshaOverview | null;
   isOverviewLoading: boolean;
   overviewError: string | null;
+  isOverviewOffline?: boolean;
+  overviewCachedAt?: string | null;
   onRefreshOverview: () => void;
 }
 
@@ -121,6 +125,8 @@ export function AshaWorkspace({
   overview,
   isOverviewLoading,
   overviewError,
+  isOverviewOffline = false,
+  overviewCachedAt = null,
   onRefreshOverview,
 }: AshaWorkspaceProps) {
   const router = useRouter();
@@ -184,7 +190,10 @@ export function AshaWorkspace({
   }, [selectedPatient, isVoiceModalOpen]);
 
   async function handleSignOut() {
-    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
+    await Promise.all([
+      clearOfflineCache(),
+      fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined),
+    ]);
     router.push('/login');
   }
 
@@ -274,6 +283,30 @@ export function AshaWorkspace({
             </button>
           </div>
         </header>
+
+        {/* Offline cached data banner */}
+        {isOverviewOffline && overview && (
+          <div
+            role="status"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-asha-amber/60 bg-asha-amber/40 px-4 py-2.5 text-sm text-[#7A4E0A]"
+          >
+            <div className="flex items-center gap-2 font-medium">
+              <WifiOff className="h-4 w-4 shrink-0" aria-hidden />
+              <span>
+                Offline — showing saved schedule &amp; patients
+                {overviewCachedAt ? ` (${formatVisitDate(overviewCachedAt, uiLang)})` : ''}. Will refresh automatically when online.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={onRefreshOverview}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-bold text-[#7A4E0A] shadow-sm hover:bg-asha-cream"
+            >
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+              Refresh
+            </button>
+          </div>
+        )}
 
         {/* Overview error banner */}
         {overviewError && (
