@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb, hasDatabase } from '@/lib/db/client';
-import { sessionFromRequest, type Session } from './session';
+import { sessionFromRequest, sessionRole, type Session, type UserRole } from './session';
 
 /** Use at the top of an API route: `const auth = requireSession(req); if (!auth.ok) return auth.response;` */
 export function requireSession(req: Request): { ok: true; session: Session } | { ok: false; response: NextResponse } {
@@ -13,6 +13,16 @@ export function requireSession(req: Request): { ok: true; session: Session } | {
   }
   if (!session) return { ok: false, response: NextResponse.json({ error: 'SIGN_IN_REQUIRED' }, { status: 401 }) };
   return { ok: true, session };
+}
+
+/** Requires a valid session whose role matches `role`; returns 403 FORBIDDEN otherwise. */
+export function requireRole(req: Request, role: UserRole): { ok: true; session: Session } | { ok: false; response: NextResponse } {
+  const auth = requireSession(req);
+  if (!auth.ok) return auth;
+  if (sessionRole(auth.session) !== role) {
+    return { ok: false, response: NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 }) };
+  }
+  return auth;
 }
 
 /**

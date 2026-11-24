@@ -12,11 +12,19 @@ import type {
 import { ErrorBoundary } from './ErrorBoundary';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { StartScreen } from './asha/StartScreen';
+import { AshaWorkspace } from './asha/AshaWorkspace';
 import { DEFAULT_LANGUAGE, type LangCode } from '@/lib/languages';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
 import { defaultVoice, resolveVoice } from '@/lib/voices';
 import { startRtmBuffer, type RtmBuffer } from '@/lib/rtm-buffer';
 import { useVoicePreview } from '@/hooks/use-voice-preview';
+import { useAshaOverview } from '@/hooks/use-asha-overview';
+import {
+  SETUP_DONE_COOKIE,
+  readPrefCookie,
+  voiceCookieName,
+  writePrefCookie,
+} from '@/lib/client-prefs';
 
 // Dynamically import the ConversationComponent with ssr disabled
 const ConversationComponent = dynamic(() => import('./ConversationComponent'), {
@@ -58,8 +66,26 @@ const AgoraProvider = dynamic(
   { ssr: false },
 );
 
-export default function LandingPage() {
+interface LandingPageProps {
+  initialSetupDone?: boolean;
+}
+
+export default function LandingPage({ initialSetupDone = false }: LandingPageProps) {
   const [showConversation, setShowConversation] = useState(false);
+  const {
+    overview,
+    isLoading: isOverviewLoading,
+    error: overviewError,
+    isOffline: isOverviewOffline,
+    cachedAt: overviewCachedAt,
+    refresh: refreshOverview,
+  } = useAshaOverview();
+  const [hasCompletedSetup, setHasCompletedSetup] = useState(initialSetupDone);
+
+  const markSetupDone = useCallback(() => {
+    writePrefCookie(SETUP_DONE_COOKIE, '1');
+    setHasCompletedSetup(true);
+  }, []);
 
   // Preload heavy modules on mount so they're already cached when the user
   // clicks "Try it Now" — eliminates the ~1.8s dynamic-import delay.
@@ -75,14 +101,13 @@ export default function LandingPage() {
   const rtmBufferRef = useRef<RtmBuffer | null>(null);
   // Real reason the agent could not start (HTTP status + body), shown on screen instead of a vague banner.
   const [agentJoinError, setAgentJoinError] = useState<string | null>(null);
-  // The language choice is shared with the whole site (and remembered in this browser). The call uses it and keeps it fixed until the call ends.
+  // The language choice is shared with the whole site (and remembered in a cookie). The call uses it and keeps it fixed until the call ends.
   const { language, setLanguage: chooseLanguage, s } = useLanguage();
   const [callLanguage, setCallLanguage] = useState<LangCode>(DEFAULT_LANGUAGE);
-  // Voice: remembered per language in this browser.
+  // Voice: remembered per language in a cookie.
   const [voice, setVoiceState] = useState<string>(defaultVoice(language).id);
   useEffect(() => {
-    let saved: string | null = null;
-    try { saved = window.localStorage.getItem(`asha_voice_${language}`); } catch { /* storage blocked: use the default */ }
+    const saved = readPrefCookie(voiceCookieName(language));
     setVoiceState(resolveVoice(language, saved).id);
   }, [language]);
   // Tapping a voice or a language plays a short sample of it (samples are static files, made once with `pnpm voice:samples`; Auto uses the Hindi ones).
@@ -90,13 +115,12 @@ export default function LandingPage() {
   const sampleLang = (l: LangCode) => (l === 'auto' ? 'hi' : l);
   const chooseVoice = (id: string) => {
     setVoiceState(id);
-    try { window.localStorage.setItem(`asha_voice_${language}`, id); } catch { /* ignore */ }
+    writePrefCookie(voiceCookieName(language), id);
     preview.play(sampleLang(language), id);
   };
   const pickLanguage = (code: LangCode) => {
     chooseLanguage(code);
-    let saved: string | null = null;
-    try { saved = window.localStorage.getItem(`asha_voice_${code}`); } catch { /* ignore */ }
+    const saved = readPrefCookie(voiceCookieName(code));
     preview.play(sampleLang(code), resolveVoice(code, saved).id);
   };
   const playingVoice = preview.playing && preview.playing.startsWith(`${sampleLang(language)}:`) ? preview.playing.slice(sampleLang(language).length + 1) : null;
@@ -287,12 +311,45 @@ export default function LandingPage() {
     rtmClient?.logout().catch((err) => console.error('RTM logout error:', err));
     setRtmClient(null);
     setShowConversation(false);
+    refreshOverview();
   };
 
   return (
     <div className="relative h-dvh overflow-hidden bg-asha-cream text-asha-ink">
       {!showConversation ? (
-        <StartScreen isLoading={isLoading} error={error} onStart={handleStartConversation} language={language} onLanguageChange={pickLanguage} voice={voice} onVoiceChange={chooseVoice} playingVoice={playingVoice} />
+        hasCompletedSetup ? (
+          <AshaWorkspace
+            isStartingCall={isLoading}
+            callError={error}
+            onStartCall={handleStartConversation}
+            language={language}
+            onLanguageChange={pickLanguage}
+            voice={voice}
+            onVoiceChange={chooseVoice}
+            playingVoice={playingVoice}
+            overview={overview}
+            isOverviewLoading={isOverviewLoading}
+            overviewError={overviewError}
+            isOverviewOffline={isOverviewOffline}
+            overviewCachedAt={overviewCachedAt}
+            onRefreshOverview={refreshOverview}
+          />
+        ) : (
+          <StartScreen
+            isLoading={isLoading}
+            error={error}
+            onStart={() => {
+              markSetupDone();
+              void handleStartConversation();
+            }}
+            onSkipToWorkspace={markSetupDone}
+            language={language}
+            onLanguageChange={pickLanguage}
+            voice={voice}
+            onVoiceChange={chooseVoice}
+            playingVoice={playingVoice}
+          />
+        )
       ) : agoraData && rtmClient ? (
         <>
           {/* Non-fatal: the call screen still renders, but say exactly why the agent is missing. */}

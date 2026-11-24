@@ -4,11 +4,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { usePathname } from 'next/navigation';
 import { DEFAULT_LANGUAGE, isLangCode, type LangCode } from '@/lib/languages';
 import { STRINGS, isUiLang, type Strings, type UiLang } from '@/lib/i18n';
+import { LANGUAGE_COOKIE, UI_LANGUAGE_COOKIE, readPrefCookie, writePrefCookie } from '@/lib/client-prefs';
 
 // One language choice for the whole site: the landing page text, the sign-in, the start screen and (unless it is Auto) the call language.
-// It is remembered in this browser only. Auto keeps the last real interface language, because Auto has no text of its own.
-const KEY = 'asha_language';
-const UI_KEY = 'asha_ui_language';
+// Stored in a SameSite=Lax cookie. Auto keeps the last real interface language, because Auto has no text of its own.
+const KEY = LANGUAGE_COOKIE;
+const UI_KEY = UI_LANGUAGE_COOKIE;
 
 type Ctx = {
   /** What the person picked, which may be "auto" */
@@ -22,18 +23,10 @@ type Ctx = {
 const LanguageContext = createContext<Ctx | null>(null);
 
 function read(key: string): string | null {
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null; // private window or blocked storage: the choice just is not remembered
-  }
+  return readPrefCookie(key);
 }
 function write(key: string, value: string) {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    /* ignore */
-  }
+  writePrefCookie(key, value);
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {

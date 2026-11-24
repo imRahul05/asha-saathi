@@ -14,6 +14,8 @@ import { GoodToKnow } from './RecordGuide';
 import { VoicePicker } from './VoicePicker';
 import { VOICES, resolveVoice } from '@/lib/voices';
 import { cn } from '@/lib/utils';
+import { SETUP_DONE_COOKIE, writePrefCookie } from '@/lib/client-prefs';
+import { clearOfflineCache } from '@/lib/offline-cache';
 
 type StepNumber = 1 | 2 | 3;
 type SlideDirection = 'none' | 'forward' | 'backward';
@@ -22,12 +24,17 @@ interface StartScreenProps {
   isLoading: boolean;
   error: string | null;
   onStart: () => void;
+  onSkipToWorkspace?: () => void;
   language: LangCode;
   onLanguageChange: (code: LangCode) => void;
   voice: string;
   onVoiceChange: (id: string) => void;
   /** id of the voice whose sample is playing right now, if any */
   playingVoice?: string | null;
+}
+
+function persistSetupDone() {
+  writePrefCookie(SETUP_DONE_COOKIE, '1');
 }
 
 interface StepDescriptor {
@@ -40,6 +47,7 @@ export function StartScreen({
   isLoading,
   error,
   onStart,
+  onSkipToWorkspace,
   language,
   onLanguageChange,
   voice,
@@ -98,8 +106,21 @@ export function StartScreen({
     }, 380);
   }
 
+  function handleStartClick() {
+    persistSetupDone();
+    onStart();
+  }
+
+  function handleSkipClick() {
+    persistSetupDone();
+    onSkipToWorkspace?.();
+  }
+
   async function signOut() {
-    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
+    await Promise.all([
+      clearOfflineCache(),
+      fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined),
+    ]);
     router.push('/login');
   }
 
@@ -329,7 +350,7 @@ export function StartScreen({
                   <SaathiAvatar
                     state={isLoading ? 'connecting' : playingVoice ? 'talking' : 'idle'}
                     label={isLoading ? s.connecting : s.startButton}
-                    onClick={onStart}
+                    onClick={handleStartClick}
                     disabled={isLoading}
                   />
 
@@ -356,6 +377,16 @@ export function StartScreen({
           <div className="mt-2 min-h-6 max-w-[20rem] text-sm text-asha-red" role={error ? 'alert' : undefined}>
             {error}
           </div>
+
+          {onSkipToWorkspace && !isLoading && (
+            <button
+              type="button"
+              onClick={handleSkipClick}
+              className="mt-1 rounded-full px-4 py-2 text-sm font-semibold text-asha-muted underline underline-offset-4 transition-colors hover:text-asha-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-asha-teal"
+            >
+              Skip to workspace
+            </button>
+          )}
         </div>
 
         <GoodToKnow s={s} className="w-full max-w-sm" />
