@@ -22,7 +22,7 @@ export function VoicePicker({
     const t = track.current;
     if (!el || !t) return;
     programmatic.current = true;
-    t.scrollTo({ left: el.offsetLeft - (t.clientWidth - el.clientWidth) / 2, behavior: smooth ? 'smooth' : 'auto' });
+    t.scrollTo({ left: el.offsetLeft - (t.clientWidth - el.clientWidth) / 2, behavior: smooth ? 'smooth' : 'instant' });
     setTimeout(() => { programmatic.current = false; }, 450);
   }, []);
 
