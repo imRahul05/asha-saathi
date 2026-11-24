@@ -17,12 +17,16 @@ import {
   TriangleAlert,
   Users,
   WifiOff,
+  X,
 } from 'lucide-react';
 import { BrandMark } from '@/components/BrandMark';
+import { WebCallOverlay } from '@/components/call/WebCallOverlay';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
 import { useDoctorOverview } from '@/hooks/use-doctor-overview';
+import { useWebCalling } from '@/hooks/use-web-calling';
 import { clearOfflineCache } from '@/lib/offline-cache';
 import { dueNowCount, formatDueDate, todayInIndia } from '@/lib/asha/schedule';
+import type { UseWebCallingResult } from '@/lib/call/signaling-types';
 import type { DoctorOverview, DoctorVisitCase, PatientSummary, PatientVisitSummary } from '@/lib/overview-types';
 import type { RiskLevel, SnapshotEvent, SnapshotVisit } from '@/lib/snapshot-types';
 import type { Strings, UiLang } from '@/lib/i18n';
@@ -38,12 +42,6 @@ type PatientFilter = 'all' | 'high_risk' | 'pending_today' | 'visited_today';
 interface DashboardProps {
   isDoctorSession?: boolean;
   dashboardKey?: string | null;
-}
-
-interface CallLinkResponse {
-  doctor?: string;
-  asha?: string;
-  error?: string;
 }
 
 const RISK_BADGE_STYLE: Record<RiskLevel, string> = {
@@ -129,10 +127,19 @@ function isHighRisk(level: RiskLevel): boolean {
   return level === 'high' || level === 'urgent';
 }
 
+function formatAlertChannel(channel: string | null): string {
+  if (channel === 'telegram') return 'Telegram';
+  if (channel === 'twilio-whatsapp') return 'WhatsApp';
+  if (channel === 'twilio-sms') return 'SMS';
+  if (channel === 'console') return 'Dashboard';
+  return channel ?? 'Dashboard';
+}
+
 export function Dashboard({ isDoctorSession = false, dashboardKey = null }: DashboardProps) {
   const router = useRouter();
   const { s, uiLang } = useLanguage();
   const { overview, error, isLoading, isOffline, cachedAt, refresh } = useDoctorOverview(dashboardKey);
+  const calling = useWebCalling({ enabled: isDoctorSession });
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   const handleSignOut = async () => {
@@ -154,9 +161,11 @@ export function Dashboard({ isDoctorSession = false, dashboardKey = null }: Dash
 
   return (
     <div className="min-h-dvh bg-asha-cream px-4 py-5 text-asha-ink sm:px-8 sm:py-8">
+      <WebCallOverlay calling={calling} />
       <Header
         overview={overview}
         isDoctorSession={isDoctorSession}
+        calling={calling}
         isSigningOut={isSigningOut}
         onRefresh={refresh}
         onSignOut={() => {
@@ -247,6 +256,7 @@ export function Dashboard({ isDoctorSession = false, dashboardKey = null }: Dash
           <ClinicalWorkspace
             overview={overview}
             isDoctorSession={isDoctorSession}
+            calling={calling}
             error={error}
             s={s}
             uiLang={uiLang}
@@ -260,12 +270,14 @@ export function Dashboard({ isDoctorSession = false, dashboardKey = null }: Dash
 function Header({
   overview,
   isDoctorSession,
+  calling,
   isSigningOut,
   onRefresh,
   onSignOut,
 }: {
   overview: DoctorOverview | null;
   isDoctorSession: boolean;
+  calling: UseWebCallingResult;
   isSigningOut: boolean;
   onRefresh: () => void;
   onSignOut: () => void;
@@ -306,6 +318,31 @@ function Header({
           {isLive ? 'Live call' : 'Standby'}
         </span>
 
+        {isDoctorSession && (calling.isPeerOnline || calling.isRtmConnected) && (
+          <span
+            className={cn(
+              'inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-semibold',
+              calling.isPeerOnline
+                ? 'border-asha-teal/30 bg-asha-mint text-asha-teal'
+                : 'border-asha-line bg-white text-asha-muted',
+            )}
+            title={
+              calling.isPeerOnline
+                ? 'ASHA worker is online and ready for instant web calls'
+                : 'Connected for live web calls'
+            }
+          >
+            <span
+              className={cn(
+                'h-2.5 w-2.5 rounded-full',
+                calling.isPeerOnline ? 'bg-emerald-500' : 'bg-asha-teal/50',
+              )}
+              aria-hidden
+            />
+            {calling.isPeerOnline ? 'ASHA online' : 'Ready for calls'}
+          </span>
+        )}
+
         <button
           type="button"
           onClick={onRefresh}
@@ -335,17 +372,43 @@ function Header({
 function ClinicalWorkspace({
   overview,
   isDoctorSession,
+  calling,
   error,
   s,
   uiLang,
 }: {
   overview: DoctorOverview;
   isDoctorSession: boolean;
+  calling: UseWebCallingResult;
   error: string | null;
   s: Strings;
   uiLang: UiLang;
 }) {
   const [activeTab, setActiveTab] = useState<DashboardTab>('cases');
+  const [caseFilter, setCaseFilter] = useState<CaseFilter>('all');
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [dismissedAlertIds, setDismissedAlertIds] = useState<string[]>([]);
+
+  const recentSyncedAlert = useMemo(() => {
+    const serverMs = new Date(overview.serverTime).getTime();
+    if (Number.isNaN(serverMs)) return null;
+    const tenMinutesMs = 10 * 60_000;
+    let newest: DoctorVisitCase | null = null;
+    let newestMs = -Infinity;
+
+    for (const visitCase of overview.cases) {
+      if (visitCase.alert?.status !== 'sent') continue;
+      if (dismissedAlertIds.includes(visitCase.id)) continue;
+      const alertTimeIso = visitCase.alert.sentAt ?? visitCase.visitedAt;
+      const alertMs = new Date(alertTimeIso).getTime();
+      if (Number.isNaN(alertMs)) continue;
+      if (serverMs - alertMs <= tenMinutesMs && alertMs > newestMs) {
+        newest = visitCase;
+        newestMs = alertMs;
+      }
+    }
+    return newest;
+  }, [overview.cases, overview.serverTime, dismissedAlertIds]);
 
   const dueNow = useMemo(
     () => dueNowCount(overview.schedule, todayInIndia()),
@@ -428,6 +491,88 @@ function ClinicalWorkspace({
 
   return (
     <div className="space-y-6">
+      {recentSyncedAlert && (
+        <div
+          role="status"
+          className={cn(
+            'rounded-3xl border p-4 shadow-sm sm:px-5',
+            isHighRisk(recentSyncedAlert.risk.level)
+              ? 'border-asha-red/30 bg-asha-red-soft'
+              : 'border-asha-teal/30 bg-asha-mint/70',
+          )}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-0.5 text-xs font-extrabold text-asha-teal shadow-xs">
+                  <Bell className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  New alert synced with {formatAlertChannel(recentSyncedAlert.alert?.channel ?? null)}
+                </span>
+                <RiskPill level={recentSyncedAlert.risk.level} />
+                <span className="text-xs font-medium text-asha-muted">
+                  {formatIndiaTime(recentSyncedAlert.alert?.sentAt ?? recentSyncedAlert.visitedAt)}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                <span className="font-display text-base font-extrabold text-asha-ink">
+                  {recentSyncedAlert.beneficiary.name}
+                </span>
+                {recentSyncedAlert.beneficiary.village && (
+                  <span className="text-asha-muted">{recentSyncedAlert.beneficiary.village}</span>
+                )}
+                <span className="rounded-lg bg-white/90 px-2 py-0.5 text-xs font-bold text-asha-ink">
+                  BP {formatBp(recentSyncedAlert.vitals.bpSys, recentSyncedAlert.vitals.bpDia)}
+                </span>
+                <span className="rounded-lg bg-white/90 px-2 py-0.5 text-xs font-bold text-asha-ink">
+                  Hb {formatHb(recentSyncedAlert.vitals.hb)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCaseFilter('all');
+                  setSelectedCaseId(recentSyncedAlert.id);
+                  setActiveTab('cases');
+                }}
+                className="inline-flex h-9 items-center rounded-full border border-asha-line bg-white px-3.5 text-xs font-bold text-asha-ink transition-colors hover:border-asha-teal/40 hover:bg-asha-cream"
+              >
+                View case
+              </button>
+              {isDoctorSession && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void calling.startCall({
+                      visitId: recentSyncedAlert.id,
+                      patientName: recentSyncedAlert.beneficiary.name,
+                      patientVillage: recentSyncedAlert.beneficiary.village,
+                      riskLevel: recentSyncedAlert.risk.level,
+                    });
+                  }}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-asha-teal px-3.5 text-xs font-bold text-white transition-colors hover:bg-asha-teal-dark"
+                >
+                  <Phone className="h-3.5 w-3.5" aria-hidden />
+                  Call ASHA
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setDismissedAlertIds((prev) => [...prev, recentSyncedAlert.id])}
+                aria-label="Dismiss synced alert notification"
+                title="Dismiss"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-asha-muted transition-colors hover:bg-white hover:text-asha-ink"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div
           role="status"
@@ -464,6 +609,11 @@ function ClinicalWorkspace({
           cases={overview.cases}
           events={overview.events}
           isDoctorSession={isDoctorSession}
+          calling={calling}
+          filter={caseFilter}
+          onFilterChange={setCaseFilter}
+          selectedCaseId={selectedCaseId}
+          onSelectCaseId={setSelectedCaseId}
           s={s}
           uiLang={uiLang}
           onOpenPatients={() => setActiveTab('patients')}
@@ -503,6 +653,11 @@ function CasesTab({
   cases,
   events,
   isDoctorSession,
+  calling,
+  filter,
+  onFilterChange,
+  selectedCaseId,
+  onSelectCaseId,
   s,
   uiLang,
   onOpenPatients,
@@ -510,15 +665,15 @@ function CasesTab({
   cases: DoctorVisitCase[];
   events: SnapshotEvent[];
   isDoctorSession: boolean;
+  calling: UseWebCallingResult;
+  filter: CaseFilter;
+  onFilterChange: (next: CaseFilter) => void;
+  selectedCaseId: string | null;
+  onSelectCaseId: (id: string | null) => void;
   s: Strings;
   uiLang: UiLang;
   onOpenPatients: () => void;
 }) {
-  const [filter, setFilter] = useState<CaseFilter>('all');
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
-  const [callingVisitId, setCallingVisitId] = useState<string | null>(null);
-  const [callError, setCallError] = useState<string | null>(null);
-
   const highCount = useMemo(() => cases.filter((c) => isHighRisk(c.risk.level)).length, [cases]);
   const alertsCount = useMemo(() => cases.filter((c) => c.alert !== null || c.alertHeld).length, [cases]);
 
@@ -537,25 +692,10 @@ function CasesTab({
     return filteredCases[0];
   }, [filteredCases, selectedCaseId]);
 
-  const handleCallAsha = async (visitId: string) => {
-    setCallingVisitId(visitId);
-    setCallError(null);
-    try {
-      const res = await fetch(`/api/call/link?visit=${encodeURIComponent(visitId)}`, {
-        cache: 'no-store',
-      });
-      const data = (await res.json().catch((): CallLinkResponse => ({ error: `HTTP_${res.status}` }))) as CallLinkResponse;
-      if (!res.ok || !data.doctor) {
-        setCallError(data.error ?? 'Could not create call link.');
-        return;
-      }
-      window.open(data.doctor, '_blank', 'noopener,noreferrer');
-    } catch {
-      setCallError('Network error while starting call.');
-    } finally {
-      setCallingVisitId(null);
-    }
-  };
+  const isRingingSelectedCase =
+    selectedCase !== null &&
+    calling.outgoingCall?.status === 'ringing' &&
+    calling.outgoingCall.summary.visitId === selectedCase.id;
 
   if (cases.length === 0) {
     return (
@@ -582,20 +722,20 @@ function CasesTab({
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter cases">
         <FilterChip
           active={filter === 'all'}
-          onClick={() => setFilter('all')}
+          onClick={() => onFilterChange('all')}
           label="All cases"
           count={cases.length}
         />
         <FilterChip
           active={filter === 'high'}
-          onClick={() => setFilter('high')}
+          onClick={() => onFilterChange('high')}
           label="High / Urgent"
           count={highCount}
           tone="red"
         />
         <FilterChip
           active={filter === 'alerts'}
-          onClick={() => setFilter('alerts')}
+          onClick={() => onFilterChange('alerts')}
           label="Alerts"
           count={alertsCount}
         />
@@ -606,7 +746,7 @@ function CasesTab({
           <p className="text-lg font-extrabold text-asha-ink">No cases match this filter</p>
           <button
             type="button"
-            onClick={() => setFilter('all')}
+            onClick={() => onFilterChange('all')}
             className="mt-3 rounded-full border border-asha-line bg-white px-4 py-2 text-sm font-bold text-asha-teal hover:bg-asha-mint/40"
           >
             Show all cases
@@ -623,8 +763,7 @@ function CasesTab({
                   key={visitCase.id}
                   type="button"
                   onClick={() => {
-                    setSelectedCaseId(visitCase.id);
-                    setCallError(null);
+                    onSelectCaseId(visitCase.id);
                   }}
                   className={cn(
                     'w-full rounded-2xl border p-4 text-left transition-all',
@@ -708,13 +847,18 @@ function CasesTab({
                       <button
                         type="button"
                         onClick={() => {
-                          void handleCallAsha(selectedCase.id);
+                          void calling.startCall({
+                            visitId: selectedCase.id,
+                            patientName: selectedCase.beneficiary.name,
+                            patientVillage: selectedCase.beneficiary.village,
+                            riskLevel: selectedCase.risk.level,
+                          });
                         }}
-                        disabled={callingVisitId === selectedCase.id}
+                        disabled={isRingingSelectedCase}
                         className="inline-flex items-center gap-2 rounded-full bg-asha-teal px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-asha-teal-dark disabled:opacity-60"
                       >
                         <Phone className="h-4 w-4" aria-hidden />
-                        {callingVisitId === selectedCase.id ? 'Connecting…' : 'Call ASHA'}
+                        {isRingingSelectedCase ? 'Ringing…' : 'Call ASHA'}
                       </button>
                     ) : (
                       <button
@@ -729,12 +873,6 @@ function CasesTab({
                     )}
                   </div>
                 </div>
-
-                {callError && (
-                  <p className="mt-3 rounded-xl bg-asha-red-soft px-3.5 py-2 text-sm font-semibold text-asha-red">
-                    {callError}
-                  </p>
-                )}
               </section>
 
               {/* Clinical Risk & Vitals Card */}
@@ -767,7 +905,9 @@ function CasesTab({
                           </p>
                           <p className="text-xs text-asha-muted">
                             {[
-                              selectedCase.alert.channel ? `Channel: ${selectedCase.alert.channel}` : null,
+                              selectedCase.alert.channel
+                                ? `Channel: ${formatAlertChannel(selectedCase.alert.channel)}`
+                                : null,
                               selectedCase.alert.doctor ? `To: ${selectedCase.alert.doctor}` : null,
                               selectedCase.alert.sentAt
                                 ? `Sent ${formatIndiaDateTime(selectedCase.alert.sentAt)}`
@@ -1332,10 +1472,11 @@ function RiskPill({ level }: { level: RiskLevel }) {
 
 function AlertBadge({ visitCase }: { visitCase: DoctorVisitCase }) {
   if (visitCase.alert?.status === 'sent') {
+    const channelLabel = formatAlertChannel(visitCase.alert.channel);
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-asha-mint px-2.5 py-0.5 text-xs font-bold text-asha-teal">
         <Check className="h-3 w-3" aria-hidden />
-        Alert sent
+        Sent via {channelLabel}
       </span>
     );
   }

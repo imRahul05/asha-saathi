@@ -9,6 +9,7 @@ import {
   ChevronRight,
   LogOut,
   Mic,
+  Phone,
   RefreshCw,
   Search,
   SlidersHorizontal,
@@ -17,6 +18,8 @@ import {
   WifiOff,
   X,
 } from 'lucide-react';
+import { WebCallOverlay } from '@/components/call/WebCallOverlay';
+import { useWebCalling } from '@/hooks/use-web-calling';
 import { clearOfflineCache } from '@/lib/offline-cache';
 import { SaathiAvatar } from './SaathiAvatar';
 import { ConnectingGreetings } from './ConnectingGreetings';
@@ -131,6 +134,7 @@ export function AshaWorkspace({
 }: AshaWorkspaceProps) {
   const router = useRouter();
   const { s, uiLang } = useLanguage();
+  const calling = useWebCalling({ enabled: true });
   const [tab, setTab] = useState<WorkspaceTab>('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [patientFilter, setPatientFilter] = useState<PatientFilter>('all');
@@ -213,6 +217,17 @@ export function AshaWorkspace({
     onStartCall();
   }
 
+  function handleCallDoctorFromModal() {
+    if (!selectedPatient) return;
+    const patient = selectedPatient;
+    setSelectedPatient(null);
+    void calling.startCall({
+      patientName: patient.name,
+      patientVillage: patient.village,
+      riskLevel: patient.latestVisit?.riskLevel ?? null,
+    });
+  }
+
   const tabs: TabDef<WorkspaceTab>[] = [
     { key: 'home', label: 'Talk' },
     {
@@ -242,11 +257,13 @@ export function AshaWorkspace({
 
   const ashaName = overview?.asha.name ?? 'ASHA Saathi';
   const ashaSubline = overview ? `ASHA · ${overview.asha.phcName}` : isOverviewLoading ? 'Loading workspace…' : 'ASHA Workspace';
+  const doctorName = calling.peerName ?? 'Doctor';
   const upNextTotal = upNextSchedule.length + pendingHighRisk.length;
   const isSessionExpired = overviewError === 'SESSION_EXPIRED';
 
   return (
     <div className="h-full w-full overflow-y-auto bg-asha-cream text-asha-ink">
+      <WebCallOverlay calling={calling} />
       <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-5 px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 lg:px-8 lg:pt-6">
         {/* Header */}
         <header className="flex flex-wrap items-center justify-between gap-3">
@@ -260,7 +277,22 @@ export function AshaWorkspace({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                void calling.startCall();
+              }}
+              title={calling.isPeerOnline ? `${doctorName} is online` : `Call ${doctorName}`}
+              aria-label={calling.isPeerOnline ? `${doctorName} is online — Call ${doctorName}` : `Call ${doctorName}`}
+              className="inline-flex h-10 items-center gap-2 rounded-full border border-asha-teal/35 bg-white px-3.5 text-sm font-bold text-asha-teal transition-colors hover:bg-asha-mint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-asha-teal"
+            >
+              <Phone className="h-4 w-4 shrink-0" aria-hidden />
+              <span>Call Doctor</span>
+              {calling.isPeerOnline && (
+                <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden />
+              )}
+            </button>
             <button
               type="button"
               onClick={() => setIsVoiceModalOpen(true)}
@@ -744,8 +776,11 @@ export function AshaWorkspace({
           lang={uiLang}
           weeksLabel={s.weeksN}
           isStartingCall={isStartingCall}
+          doctorName={doctorName}
+          isDoctorOnline={calling.isPeerOnline}
           onClose={() => setSelectedPatient(null)}
           onTalkToSaathi={handleTalkFromModal}
+          onCallDoctor={handleCallDoctorFromModal}
         />
       )}
 
@@ -834,8 +869,11 @@ interface PatientDetailModalProps {
   lang: string;
   weeksLabel: (n: number) => string;
   isStartingCall: boolean;
+  doctorName: string;
+  isDoctorOnline: boolean;
   onClose: () => void;
   onTalkToSaathi: () => void;
+  onCallDoctor: () => void;
 }
 
 function PatientDetailModal({
@@ -843,8 +881,11 @@ function PatientDetailModal({
   lang,
   weeksLabel,
   isStartingCall,
+  doctorName,
+  isDoctorOnline,
   onClose,
   onTalkToSaathi,
+  onCallDoctor,
 }: PatientDetailModalProps) {
   const badge = getPatientBadge(patient);
   const details = [
@@ -949,15 +990,32 @@ function PatientDetailModal({
         </div>
 
         {/* Sticky Footer CTA */}
-        <div className="border-t border-asha-line bg-white px-6 py-4">
+        <div className="flex flex-col gap-2.5 border-t border-asha-line bg-white px-6 py-4 sm:flex-row">
           <button
             type="button"
             disabled={isStartingCall}
             onClick={onTalkToSaathi}
-            className="inline-flex h-13 w-full items-center justify-center gap-2.5 rounded-full bg-asha-orange px-6 py-3 text-base font-bold text-asha-night transition-colors hover:bg-[#E8863C] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-asha-orange/50 disabled:opacity-70"
+            className="inline-flex h-13 flex-1 items-center justify-center gap-2.5 rounded-full bg-asha-orange px-6 py-3 text-base font-bold text-asha-night transition-colors hover:bg-[#E8863C] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-asha-orange/50 disabled:opacity-70"
           >
             <Mic className="h-5 w-5" aria-hidden />
             Talk to Saathi
+          </button>
+          <button
+            type="button"
+            onClick={onCallDoctor}
+            title={isDoctorOnline ? `${doctorName} is online` : `Call ${doctorName}`}
+            aria-label={
+              isDoctorOnline
+                ? `Call ${doctorName} about ${patient.name} (${doctorName} is online)`
+                : `Call ${doctorName} about ${patient.name}`
+            }
+            className="inline-flex h-13 items-center justify-center gap-2 rounded-full border-2 border-asha-teal bg-white px-5 py-3 text-base font-bold text-asha-teal transition-colors hover:bg-asha-mint focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-asha-teal/30"
+          >
+            <Phone className="h-5 w-5 shrink-0" aria-hidden />
+            <span>Call Doctor</span>
+            {isDoctorOnline && (
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
+            )}
           </button>
         </div>
       </div>
