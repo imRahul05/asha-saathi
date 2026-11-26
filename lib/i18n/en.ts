@@ -50,6 +50,10 @@ export const en = {
   demoYes: 'Yes, send it.',
   demoDone: 'Doctor alerted',
   demoFollow: 'Follow-up in 3 days',
+  themeDark: 'Switch to dark mode',
+  themeLight: 'Switch to light mode',
+  layersH: 'Inside one visit',
+  layersP: 'Five layers turn one spoken sentence into a safe referral. Scroll through them, or tap a step.',
   // ---- sign in
   loginTitle: 'Try ASHA Saathi',
   loginIntro: 'One tap signs you in as a demo ASHA with six sample mothers. You get your own private copy, so nothing you do affects anyone else. Demo data is deleted after 24 hours.',

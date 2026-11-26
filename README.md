@@ -103,6 +103,12 @@ The start screen has a swipeable voice picker (cards you can swipe, tap, or step
 
 For HIGH and URGENT visits the alert message carries a signed link (`/call/<token>`, valid 6 hours). The doctor taps it and joins a browser voice call with the ASHA over Agora RTC: no app, no account, audio only. The page shows the visit summary beside the call. The ASHA opens the same call from the "call doctor" button on the result card. Needs `PUBLIC_BASE_URL` set so the link is absolute.
 
+## Theme
+
+The landing page (`/`) has a light and a dark theme, using `next-themes`. The first visit follows the phone or computer setting; the sun/moon button in the header stores an explicit choice in the browser. The ASHA palette (`asha-*` Tailwind colours) is defined as CSS variables in `app/globals.css`, with a `.dark` override. Every other route (sign-in, start, call, dashboard) is forced to light in `components/theme/ThemeProvider.tsx` until those screens are designed for dark; add a route to `THEMED_ROUTES` once it is.
+
+The landing page also has an "Inside one visit" section (`components/landing/VisitLayers.tsx`): the five steps of a visit drawn as a 3D stack of layers, built with CSS 3D transforms (no 3D library). On wide screens scrolling opens the stack and walks through the layers; on any screen you can tap a step instead, and phones play through on their own while the section is in view. Reduced-motion users get a still, open stack.
+
 ## Languages
 
 The whole interface (landing page, sign-in, start screen, call screen, result and alert cards) is written in nine languages: Hindi, English, Kannada, Tamil, Telugu, Gujarati, Bengali, Marathi and Malayalam. Pick one with the switcher in the landing page header or the language chips on the start screen; the choice is remembered in the browser and is also the call language. Auto keeps the last chosen interface language until it hears speech, then follows the script of what was spoken, and shows a rotating hello in every language while connecting. The texts are in `lib/i18n/` (English is the master; the compiler enforces that every language has every key) and were machine-written: **have native speakers review them**. Risk reasons from the rules engine and the alert text sent to the doctor stay in English by design.
@@ -164,7 +170,8 @@ pnpm demo:reset --yes --force         # same, even if an agent started in the la
 | `app/api/invite-agent/route.ts` | starts the voice agent (managed speech + model, Murf voice, our tools) |
 | `lib/db/`, `db/schema.sql` | database client (Neon or local Postgres), repository, schema |
 | `lib/snapshot.ts`, `app/api/session/state`, `app/api/dashboard` | what the screens read |
-| `components/landing/`, `components/asha/` | landing page, voice screen, result and dashboard screens |
+| `components/landing/`, `components/asha/` | landing page (including the 3D "Inside one visit" section), voice screen, result and dashboard screens |
+| `components/theme/` | `next-themes` provider (dark mode on `/` only) and the header theme toggle |
 | `knowledge/` | verbatim guideline text with page numbers, and the rules evidence table |
 | `docs/` | `ARCHITECTURE.md` (design), `IMPLEMENTATION_PLAN.md` (plan and status), `NEXT_AGENT_PROMPTS.md` (remaining work), `LOCAL_AGENT_PROMPTS.md` (the original test prompts), `verified/` (scripts that verified the SDK shapes) |
 

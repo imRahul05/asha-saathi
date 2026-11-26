@@ -141,6 +141,47 @@
   }
 }
 
+/* ---------- ASHA Saathi palette (RGB channels, so Tailwind opacity modifiers work) ----------
+   Light is the default everywhere. The .dark class is set by next-themes, and only the landing page
+   (/) is allowed to switch: every other route is forced to light in components/theme/ThemeProvider.tsx. */
+:root {
+  --asha-cream: 246 240 228; /* #F6F0E4 */
+  --asha-night: 15 58 51; /* #0F3A33 */
+  --asha-night-soft: 22 71 63; /* #16473F */
+  --asha-sand: 239 232 218; /* #EFE8DA */
+  --asha-paper: 255 255 255; /* #FFFFFF */
+  --asha-line: 228 218 200; /* #E4DAC8 */
+  --asha-ink: 30 40 36; /* #1E2824 */
+  --asha-muted: 107 111 104; /* #6B6F68 */
+  --asha-teal: 31 107 94; /* #1F6B5E */
+  --asha-teal-dark: 22 80 70; /* #165046 */
+  --asha-orange: 217 115 42; /* #D9732A */
+  --asha-orange-dark: 184 92 27; /* #B85C1B */
+  --asha-red: 168 32 26; /* #A8201A */
+  --asha-red-soft: 251 228 225; /* #FBE4E1 */
+  --asha-mint: 227 240 232; /* #E3F0E8 */
+  --asha-amber: 244 227 180; /* #F4E3B4 */
+}
+.dark {
+  color-scheme: dark;
+  --asha-cream: 11 23 20; /* #0B1714 */
+  --asha-night: 13 47 41; /* #0D2F29 */
+  --asha-night-soft: 22 71 63; /* #16473F */
+  --asha-sand: 17 33 29; /* #11211D */
+  --asha-paper: 21 38 34; /* #152622 */
+  --asha-line: 38 56 50; /* #263832 */
+  --asha-ink: 236 231 221; /* #ECE7DD */
+  --asha-muted: 160 166 157; /* #A0A69D */
+  --asha-teal: 47 143 125; /* #2F8F7D */
+  --asha-teal-dark: 31 107 94; /* #1F6B5E */
+  --asha-orange: 230 136 66; /* #E68842 */
+  --asha-orange-dark: 217 115 42; /* #D9732A */
+  --asha-red: 224 87 76; /* #E0574C */
+  --asha-red-soft: 58 23 20; /* #3A1714 */
+  --asha-mint: 17 52 44; /* #11342C */
+  --asha-amber: 61 50 22; /* #3D3216 */
+}
+
 body {
   font-family: var(--font-sans);
   color: hsl(var(--foreground));
@@ -344,4 +385,77 @@ html { scroll-behavior: smooth; }
   .step-tick {
     animation: none;
   }
+}
+
+/* ---------- Landing: "Inside one visit" 3D layer stack (components/landing/VisitLayers.tsx) ----------
+   CSS 3D transforms only. --open (0..1) spreads the layers apart, --spin turns the stack as you scroll,
+   --tilt-x / --tilt-z follow the pointer. The active layer lifts out and turns most of the way to face you. */
+.layer-stage { perspective: 1700px; perspective-origin: 50% 40%; }
+.layer-stack {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(calc(56deg + var(--tilt-x))) rotateZ(calc(-36deg + var(--spin) + var(--tilt-z)));
+  transition: transform 0.5s cubic-bezier(0.22, 0.8, 0.24, 1);
+  --gap: calc(16px + var(--open) * 50px);
+}
+.layer-card {
+  --w: min(300px, 72vw);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--w);
+  margin-left: calc(var(--w) / -2);
+  margin-top: -80px;
+  transform-style: preserve-3d;
+  transform: translate3d(0, 0, calc((var(--i) - 2) * var(--gap)));
+  transition:
+    transform 0.7s cubic-bezier(0.22, 0.8, 0.24, 1),
+    opacity 0.5s ease;
+}
+.layer-face {
+  min-height: 160px;
+  border-radius: 1.25rem;
+  border: 1px solid rgb(var(--asha-line));
+  background: rgb(var(--asha-paper));
+  color: rgb(var(--asha-ink));
+  padding: 14px 16px;
+  box-shadow:
+    0 1px 0 rgb(var(--asha-line)),
+    0 18px 40px -18px rgb(0 0 0 / 0.35);
+  transition: box-shadow 0.5s ease, border-color 0.5s ease;
+}
+.layer-card[data-state='past'] { opacity: 0.55; }
+.layer-card[data-state='next'] {
+  /* Layers not reached yet hover higher, so the active card has room to turn without cutting through them. */
+  opacity: 0.3;
+  transform: translate3d(0, 0, calc((var(--i) - 2) * var(--gap) + 120px));
+}
+.layer-card[data-state='active'] {
+  opacity: 1;
+  transform:
+    translate3d(0, 0, calc((var(--i) - 2) * var(--gap) + 36px))
+    rotateZ(calc(30deg - var(--spin)))
+    rotateX(-44deg)
+    scale(1.06);
+}
+.layer-card[data-state='active'] .layer-face {
+  border-color: rgb(var(--asha-orange));
+  box-shadow:
+    0 0 0 3px rgb(var(--asha-orange) / 0.25),
+    0 40px 70px -24px rgb(0 0 0 / 0.45);
+}
+.layer-floor {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  width: 78%;
+  height: 22%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(var(--asha-teal) / 0.22), transparent);
+  filter: blur(6px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .layer-stack, .layer-card, .layer-face { transition: none; }
 }

@@ -32,7 +32,7 @@ export function DemoStage() {
 
   return (
     <div
-      className="relative mx-auto w-full max-w-md rounded-[2rem] bg-asha-cream p-5 text-asha-ink shadow-[0_30px_80px_rgba(0,0,0,0.35)] sm:p-6"
+      className="relative mx-auto w-full max-w-md rounded-[2rem] bg-asha-cream p-5 dark:ring-1 dark:ring-white/10 text-asha-ink shadow-[0_30px_80px_rgba(0,0,0,0.35)] sm:p-6"
       role="img"
       aria-label={`${s.demoSpoken} → ${s.demoRiskH} → ${s.demoDone}`}
     >
@@ -81,7 +81,7 @@ export function DemoStage() {
 
       {/* Confirmation by voice */}
       <div className={cn('mt-4 space-y-2', reveal(3))}>
-        <p className="max-w-[85%] rounded-3xl rounded-tl-lg border border-asha-line bg-white px-4 py-2.5 text-base leading-6">
+        <p className="max-w-[85%] rounded-3xl rounded-tl-lg border border-asha-line bg-asha-paper px-4 py-2.5 text-base leading-6">
           {s.demoAsk}
         </p>
         <p className={cn('ml-auto w-fit rounded-3xl rounded-tr-lg bg-asha-teal px-4 py-2.5 text-base text-white', reveal(4))}>
