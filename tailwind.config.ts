@@ -18,24 +18,25 @@ const config: Config = {
         asha: ['var(--font-latin)', 'var(--font-deva)', 'var(--font-knda)', 'system-ui', 'sans-serif'],
       },
   		colors: {
-        // ASHA Saathi palette (from the design mockups). Fixed values: these screens do not follow OS dark mode.
+        // ASHA Saathi palette (from the design mockups). Values are RGB channels in app/globals.css (:root and .dark).
+        // Only the landing page lets the theme change; every other route is forced to light by components/theme/ThemeProvider.tsx.
         asha: {
-          cream: '#F6F0E4',
-          night: '#0F3A33',
-          'night-soft': '#16473F',
-          sand: '#EFE8DA',
-          paper: '#FFFFFF',
-          line: '#E4DAC8',
-          ink: '#1E2824',
-          muted: '#6B6F68',
-          teal: '#1F6B5E',
-          'teal-dark': '#165046',
-          orange: '#D9732A',
-          'orange-dark': '#B85C1B',
-          red: '#A8201A',
-          'red-soft': '#FBE4E1',
-          mint: '#E3F0E8',
-          amber: '#F4E3B4',
+          cream: 'rgb(var(--asha-cream) / <alpha-value>)',
+          night: 'rgb(var(--asha-night) / <alpha-value>)',
+          'night-soft': 'rgb(var(--asha-night-soft) / <alpha-value>)',
+          sand: 'rgb(var(--asha-sand) / <alpha-value>)',
+          paper: 'rgb(var(--asha-paper) / <alpha-value>)',
+          line: 'rgb(var(--asha-line) / <alpha-value>)',
+          ink: 'rgb(var(--asha-ink) / <alpha-value>)',
+          muted: 'rgb(var(--asha-muted) / <alpha-value>)',
+          teal: 'rgb(var(--asha-teal) / <alpha-value>)',
+          'teal-dark': 'rgb(var(--asha-teal-dark) / <alpha-value>)',
+          orange: 'rgb(var(--asha-orange) / <alpha-value>)',
+          'orange-dark': 'rgb(var(--asha-orange-dark) / <alpha-value>)',
+          red: 'rgb(var(--asha-red) / <alpha-value>)',
+          'red-soft': 'rgb(var(--asha-red-soft) / <alpha-value>)',
+          mint: 'rgb(var(--asha-mint) / <alpha-value>)',
+          amber: 'rgb(var(--asha-amber) / <alpha-value>)',
         },
         // The <alpha-value> placeholder enables Tailwind opacity modifiers like
         // bg-primary/90, bg-card/80, bg-destructive/10, etc.

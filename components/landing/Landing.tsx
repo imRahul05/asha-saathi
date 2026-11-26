@@ -7,6 +7,7 @@ import { DemoStage } from './DemoStage';
 import { HowSteps } from './HowSteps';
 import { Reveal, WordReveal } from './Reveal';
 import { StickyHeader } from './StickyHeader';
+import { VisitLayers } from './VisitLayers';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
 import { LANGUAGES } from '@/lib/languages';
 import { HELLO, UI_LANGS } from '@/lib/i18n';
@@ -114,6 +115,9 @@ export function Landing() {
           <HowSteps steps={s.steps.map(([t, d]) => ({ t, d }))} />
         </div>
       </section>
+
+      {/* Inside one visit: the same steps as a 3D stack, driven by scroll or by tapping a step */}
+      <VisitLayers />
 
       {/* Safety */}
       <section className="bg-asha-night py-20 text-white lg:py-28">

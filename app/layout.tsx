@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { LanguageProvider } from '@/components/i18n/LanguageProvider';
+import { ThemeProvider } from '@/components/theme/ThemeProvider';
 // Self-hosted fonts (npm packages, bundled at build time). Next's Google-font loader downloads fonts while building, so one network
 // hiccup could fail a whole deploy. Each package serves per-script files, so a phone only downloads the scripts it actually shows.
 import '@fontsource-variable/inter';
@@ -34,9 +35,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="hi" className="h-full">
+    // suppressHydrationWarning: next-themes sets the theme class on <html> before React hydrates.
+    <html lang="hi" className="h-full" suppressHydrationWarning>
       <body className="h-full min-h-screen bg-asha-cream font-asha text-asha-ink antialiased">
-        <LanguageProvider>{children}</LanguageProvider>
+        <ThemeProvider>
+          <LanguageProvider>{children}</LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

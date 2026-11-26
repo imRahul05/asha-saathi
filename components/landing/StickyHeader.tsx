@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { BrandMark } from '@/components/BrandMark';
 import { cn } from '@/lib/utils';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { useLanguage } from '@/components/i18n/LanguageProvider';
 
 // Sticky top bar. A 1px sentinel tells us when the page has scrolled, so there is no scroll listener.
@@ -33,10 +34,12 @@ export function StickyHeader() {
         <nav className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between px-5 transition-[height] duration-300 sm:px-8" aria-label="Main">
           <Link href="/" className="flex items-center gap-2.5 font-display text-xl font-extrabold tracking-tight">
             <BrandMark />
-            ASHA Saathi
+            {/* Name hidden on narrow phones so the language, theme and Try buttons fit on one row */}
+            <span className="sr-only min-[440px]:not-sr-only">ASHA Saathi</span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
             <LanguageSwitcher />
+            <ThemeToggle />
             <Link
               href="/app"
               prefetch={false}

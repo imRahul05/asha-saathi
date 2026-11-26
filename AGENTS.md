@@ -60,6 +60,8 @@ The sections below (Start Here, Patterns, Anti-Patterns, etc.) remain the canoni
 - `app/api/invite-agent/route.ts`: starts the managed agent session; edit here for system prompt, VAD, model, or voice changes.
 - `app/api/stop-conversation/route.ts`: stops the agent session.
 - `app/api/chat/completions/route.ts`: optional OpenAI-compatible SSE proxy for a custom LLM (not wired by default).
+- `components/theme/ThemeProvider.tsx`: `next-themes` provider; dark mode is allowed only on routes in `THEMED_ROUTES` (the landing page), all others are forced light. ASHA colours are CSS variables in `app/globals.css` (`:root` and `.dark`).
+- `components/landing/VisitLayers.tsx`: the 3D "Inside one visit" section on `/` (scroll-driven on wide screens, tap/autoplay elsewhere).
 - `components/LandingPage.tsx`: session bootstrap, RTM setup, provider wiring, and conversation lifecycle.
 - `components/ConversationComponent.tsx`: RTC join, mic publication, `AgoraVoiceAI` init, transcript state, and renewals.
 - `components/QuickstartConversationLayout.tsx`: in-call header, transcript rail, and controls dock.

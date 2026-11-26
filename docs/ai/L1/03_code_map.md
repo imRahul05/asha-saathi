@@ -30,6 +30,8 @@ types/               Shared TypeScript route/component contracts
 - `QuickstartTranscriptPanel.tsx`: live transcript panel.
 - `QuickstartPipelineMetrics.tsx`: latency chips from metrics stream.
 - `ConnectionStatusPanel.tsx` + `ConversationErrorCard.tsx`: issue rendering/severity.
+- `landing/`: marketing page at `/`. `VisitLayers.tsx` is the scroll- or tap-driven 3D "Inside one visit" stack (CSS 3D transforms, styles in `app/globals.css`).
+- `theme/ThemeProvider.tsx`: `next-themes` provider; only routes in `THEMED_ROUTES` (`/`) may be dark, all others are forced light. `theme/ThemeToggle.tsx`: header sun/moon button.
 
 ## Shared Logic (`lib`)
 
